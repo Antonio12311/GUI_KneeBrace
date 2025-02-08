@@ -260,7 +260,7 @@ def buttons_widget(canvas):
     button1 = tk.Button(
         canvas,
         text="1",
-        bg="red",  # Initial background color (red)
+        bg="blue",  # Initial background color (red)
         fg="white",  # Text color
         font=("Arial", 12),
         relief="flat",  # Remove button border (optional)
@@ -272,7 +272,7 @@ def buttons_widget(canvas):
     button2 = tk.Button(
         canvas,
         text="2",
-        bg="red",
+        bg="blue",
         fg="white",
         font=("Arial", 12),
         relief="flat",
@@ -284,7 +284,7 @@ def buttons_widget(canvas):
     button3 = tk.Button(
         canvas,
         text="3",
-        bg="red",
+        bg="blue",
         fg="white",
         font=("Arial", 12),
         relief="flat",
@@ -295,7 +295,7 @@ def buttons_widget(canvas):
     button4 = tk.Button(
         canvas,
         text="4",
-        bg="red",  # Initial background color (red)
+        bg="blue",  # Initial background color (red)
         fg="white",  # Text color
         font=("Arial", 12),
         relief="flat",  # Remove button border (optional)
