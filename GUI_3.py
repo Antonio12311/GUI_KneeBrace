@@ -289,6 +289,7 @@ def buttons_widget(canvas):
         font=("Arial", 12),
         relief="flat",
         command=lambda: toggle_button_color(button3)
+        # deeifeifbeifeb
     )
     button3.place(x=340, y=260, width=80, height=80)
 
