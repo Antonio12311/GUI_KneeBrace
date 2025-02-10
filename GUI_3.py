@@ -349,12 +349,4 @@ def interface():
 
 # Run the interface
 interface()
-
-# La pela ptm
-# YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa
-# Pruebas en mi branch rontu
-
-# Ya se pudo, TRAAAAKAAAS
-# espero no sea necesario el commit
-
-# Toño es un pensante animal rasterro, escrito a las 5:11
+# Toño es un pendejo alv
