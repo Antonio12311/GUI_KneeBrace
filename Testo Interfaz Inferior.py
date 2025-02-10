@@ -27,29 +27,13 @@ def verificar_niveles_anteriores(nivel_actual):
                 niveles_superados[i] = True
             return True
         else:
-            messagebox.showwarning("Aviso", "Por favor, seleccione el nivel 1 para hacer los test de forma correcta.")
-            combobox.set("Nivel 1")
-            return False
-    elif nivel_actual > 1 and not niveles_superados[nivel_actual - 1]:
-        messagebox.showwarning("AVISO", "El nivel anterior no fue superado con éxito, favor de reintentar")
-        return False
-    return True
-
-"""
-def verificar_niveles_anteriores(nivel_actual):
-    if nivel_actual > 1 and not niveles_superados[nivel_actual - 2]:
-        respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
-
-        if respuesta == "yes":
-            for i in range(nivel_actual - 1):
-                cuadros[4 - i].config(bg="green")  # Cambia el color de los cuadros
-                niveles_superados[i] = True  # Marca niveles como superados
-            return True
-        else:
-            messagebox.showwarning("Aviso", f"Por favor, seleccione el nivel faltante para hacer las pruebas de forma correcta.")
+            messagebox.showwarning("Aviso", "Por favor, seleccione el nivel faltante para hacer los test de forma correcta.")
+            combobox.set("Seleccionar el nivel")
             return False
     return True
-"""
+
+
+
 def aplicar_cambios():
     nivel = combobox.get()
     valor = entrada.get()
@@ -66,7 +50,6 @@ def aplicar_cambios():
         elif nivel_num in (4, 5) and ((not valor.strip() or not valor.isdigit()) or int(valor) == 0):
             mensaje_label.config(text="ERROR. Ingrese un valor de fuerza", fg="red")
             return
-
         if not verificar_niveles_anteriores(nivel_num):
             return
 
