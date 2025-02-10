@@ -16,7 +16,7 @@ def actualizar_estado(event=None):
         entrada.config(state="disabled")
         entrada.delete(0, tk.END)
 
-"""
+
 def verificar_niveles_anteriores(nivel_actual):
     # Pregunta solo si es la primera vez seleccionando un nivel mayor a 1
     if nivel_actual > 1 and not niveles_superados[nivel_actual - 2]:
@@ -34,11 +34,10 @@ def verificar_niveles_anteriores(nivel_actual):
         messagebox.showwarning("AVISO", "El nivel anterior no fue superado con éxito, favor de reintentar")
         return False
     return True
+
 """
-
-
 def verificar_niveles_anteriores(nivel_actual):
-    while nivel_actual > 1 and not niveles_superados[nivel_actual - 2]:
+    if nivel_actual > 1 and not niveles_superados[nivel_actual - 2]:
         respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
 
         if respuesta == "yes":
@@ -48,10 +47,9 @@ def verificar_niveles_anteriores(nivel_actual):
             return True
         else:
             messagebox.showwarning("Aviso", f"Por favor, seleccione el nivel faltante para hacer las pruebas de forma correcta.")
-            combobox.set("Nivel 1")
             return False
     return True
-
+"""
 def aplicar_cambios():
     nivel = combobox.get()
     valor = entrada.get()
