@@ -79,7 +79,7 @@ def find_arduino_port():
 
 
 def connect_to_arduino():
-    global ser, status_label, connect_button, disconnect_button, stop_threads
+    global ser, status_label, connect_button, disconnect_button, stop_threads, leg_animation
 
     arduino_port = find_arduino_port()
     if arduino_port:
@@ -92,11 +92,11 @@ def connect_to_arduino():
 
                 # Start the reading thread
                 stop_threads = False
-                reading_thread = threading.Thread(target=read_serial_port, args=(ser,))
+                reading_thread = threading.Thread(target=read_serial_port, args=(ser, leg_animation))
                 reading_thread.start()
 
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to connect: {e}")
+                # messagebox.showerror("Error", f"Failed to connect: {e}")
                 if ser:
                     ser.close()
                     ser = None
@@ -104,8 +104,9 @@ def connect_to_arduino():
         messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
 
-def read_serial_port(arduino):
-    global stop_threads, data, position, torque, window, connect, ser, rad, position
+def read_serial_port(arduino,leg_animation):
+    global stop_threads, data, position, torque, window, connect, ser, rad
+
     try:
         while not stop_threads:
             if arduino and arduino.is_open:  # Check if the serial connection is open
@@ -117,11 +118,20 @@ def read_serial_port(arduino):
                         try:
                             # Process the values
                             rad = abs(float(values[0]))  # Assuming the first value is `p_out_s`
-                            position = (rad * 180) / math.pi
+                            position = (rad * 180) / math.pi  # Convert radians to degrees
                             torque = abs(float(values[1]))  # Assuming the second value is `t_out_s`
                             print(f"Position: {position}, Torque: {torque}")
+
+                            # Update the animation with the position value
+                            if leg_animation:
+                                leg_animation.update_frame(position)
+
                         except ValueError:
                             print("Error: Invalid data format. Skipping this line.")
+                    else:
+                        print("Error: Insufficient data. Skipping this line.")
+                else:
+                    print("Warning: No data received.")
             else:
                 print("Warning: Serial connection is closed.")
                 break  # Exit the loop if the serial connection is closed
@@ -176,7 +186,7 @@ class LegAnimation:
         )
 
         # Initialize with the first frame
-        self.update_frame(0)
+        self.update_frame(0)  # Start with position 0
 
     def load_video_frames(self, video_path):
         """Load the video and extract frames."""
@@ -192,21 +202,21 @@ class LegAnimation:
         cap.release()
         return frames
 
-    def input_to_frame(self, input_value, total_frames):
-        """Map input value (0-150) to frame index."""
-        # Map 0 to 150 to 0 to (total_frames - 1)
-        return int(((115 - input_value) / 115) * (total_frames - 1))
+    def input_to_frame(self, position, total_frames):
+        """Map position value (in degrees) to frame index."""
+        # Map 0° to 150° to 0 to (total_frames - 1)
+        return int(((position) / 150) * (total_frames - 1))
 
-    def update_frame(self, input_value):
-        """Update the displayed frame based on input value."""
-        frame_index = self.input_to_frame(input_value, len(self.frames))
+    def update_frame(self, position):
+        """Update the displayed frame based on position value."""
+        frame_index = self.input_to_frame(position, len(self.frames))
         frame = self.frames[frame_index]
         frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
         self.label.config(image=frame_image)
         self.label.image = frame_image  # Keep a reference to avoid garbage collection
 
-        # Update the text with the current input value
-        self.canvas.itemconfig(self.text_id, text=f"{input_value}°")
+        # Update the text with the current position value
+        self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
 
 
 class TextUpdate:
@@ -226,7 +236,7 @@ class TextUpdate:
 
 def interface():
     global window, entry_image1, entry_image2, entry_image3, entry_image4, \
-        status_label, connect_button, disconnect_button
+        status_label, connect_button, disconnect_button, leg_animation
 
     window = tk.Tk()
     window.geometry("1280x720")
@@ -235,7 +245,7 @@ def interface():
     video_path = r"C:\Users\Anton\PycharmProjects\GUI_KneeBrace\video\Leg sequence (4).mp4"  # Use raw string
 
     # Initialize the LegAnimation and TextUpdate classes
-    LegAnimation(window, canvas, video_path)
+    leg_animation = LegAnimation(window, canvas, video_path)
     TextUpdate(window, canvas)
 
     connect_widgets(canvas)
