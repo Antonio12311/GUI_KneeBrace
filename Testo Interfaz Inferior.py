@@ -19,7 +19,7 @@ def actualizar_estado(event=None):
 
 def verificar_niveles_anteriores(nivel_actual):
     # Pregunta solo si es la primera vez seleccionando un nivel mayor a 1
-    if nivel_actual > 1 and not niveles_superados[nivel_actual - 2]:
+    if nivel_actual > 1 and not niveles_superados[nivel_actual - 1]:
         respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
         if respuesta == "yes":
             for i in range(nivel_actual - 1):
