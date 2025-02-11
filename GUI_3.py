@@ -8,7 +8,7 @@ import serial.tools.list_ports
 import serial
 import os
 import math
-import time
+
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -25,6 +25,18 @@ stop_threads = False
 rad = 0
 dist = 0.22
 gravity = 9.81
+
+
+def find_video_file(directory, video_name):
+
+    search_dir = Path(directory)
+
+    # Search for the video file recursively
+    for file in search_dir.rglob(video_name):
+        if file.is_file():  # Ensure it's a file (not a directory)
+            return str(file)  # Return the full path as a string
+
+    return None
 
 
 def create_canvas(root):
@@ -242,9 +254,20 @@ def interface():
     window.geometry("1280x720")
     window.configure(bg="white")
     canvas = create_canvas(window)
-    video_path = r"C:\Users\Anton\PycharmProjects\GUI_KneeBrace\video\Leg sequence (4).mp4"  # Use raw string
 
-    # Initialize the LegAnimation and TextUpdate classes
+    video_directory = Path(__file__).resolve().parent / "video"  # Search in the "video" folder
+    video_name = "Leg sequence (4).mp4"  # Name of the video file
+
+    # Automatically detect the video path
+    video_path = find_video_file(video_directory, video_name)
+
+    if video_path:
+        print(f"Video found: {video_path}")
+    else:
+        print(f"Error: Video file '{video_name}' not found in '{video_directory}'.")
+        messagebox.showerror("Error", f"Video file '{video_name}' not found in '{video_directory}'.")
+        return
+
     leg_animation = LegAnimation(window, canvas, video_path)
     TextUpdate(window, canvas)
 
