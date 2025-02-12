@@ -1,7 +1,7 @@
 import cv2
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, PhotoImage, Button
 from pathlib import Path
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -25,6 +25,10 @@ stop_threads = False
 rad = 0
 dist = 0.22
 gravity = 9.81
+
+
+def relative_to_assets(path: str) -> Path:
+    return ASSETS_PATH / Path(path)
 
 
 def find_video_file(directory, video_name):
@@ -61,20 +65,23 @@ def connect_widgets(canvas):
         x=45.0,
         y=60.0
     )
-    connect_button = ttk.Button(canvas, text="Conectar", command=connect_to_arduino)
+    connect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_CONECTAR.png"))
+    connect_button = Button(image=connect_button_image, command=connect_to_arduino, borderwidth=4, highlightthickness=2, relief="raised")
     connect_button.place(
         x=50.0,
         y=100.0,
-        width=100.0,  # Adjusted width to fit text
-        height=20.0
+        width=120.0,  # Adjusted width to fit text
+        height=40.0
     )
-    disconnect_button = ttk.Button(canvas, text="Desconectar", command=disconnect_arduino, state="disabled")
+    disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
+    disconnect_button = Button(image=disconnect_button_image, command=disconnect_arduino, state="disabled", bg="#8FFDCD",borderwidth=4, highlightthickness=2, relief="raised")
     disconnect_button.place(
         x=50.0,
-        y=130.0,
-        width=100.0,  # Adjusted width to fit text
-        height=20.0
+        y=150.0,
+        width=120.0,  # Adjusted width to fit text
+        height=40.0
     )
+    return connect_button_image, connect_button, disconnect_button, disconnect_button_image
     # return status_label, connect_button, disconnect_button
 
 
@@ -368,6 +375,7 @@ def interface():
 
     window = tk.Tk()
     window.geometry("1000x720")
+    window.title("Knee Brace GUI")
     window.configure(background='#8FFDCD')
     canvas = create_canvas(window)
     canvas.configure(background='#8FFDCD')
@@ -391,11 +399,11 @@ def interface():
     combobox.place(x=50, y=350)
 
     vcmd = window.register(validar_entrada)
-    entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"))
+    entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="white")
     entrada.place(x=100, y=420)
     entrada.config(state="disabled")
 
-    boton_aplicar = tk.Button(window, text="Aplicar cambios", font=("Nunito", 14), command=aplicar_cambios, relief="raised", borderwidth=5)
+    boton_aplicar = tk.Button(window, text="Aplicar cambios", font=("Nunito", 14), command=aplicar_cambios, relief="raised", borderwidth=5, bg="white")
     boton_aplicar.place(x=50, y=530)
 
     mensaje_label = tk.Label(window, text="", font=("Calibri", 16), bg="#8FFDCD")
@@ -403,6 +411,8 @@ def interface():
 
     fuerzaT_label = tk.Label(window, text="F =", font=("Calibri", 18), bg="#8FFDCD")
     fuerzaT_label.place(x=50, y=420)
+    fuerzaKg_label = tk.Label(window, text="Kg", font=("Calibri", 18), bg="#8FFDCD")
+    fuerzaKg_label.place(x=250, y=420)
 
     nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Calibri", 18), bg="#8FFDCD")
     nivelesF_label.place(x=50, y=310)
@@ -422,12 +432,10 @@ def interface():
     boton_detener = tk.Button(window, text="Detener", font=("Calibri", 20), command=detener_animacion, state="disabled", borderwidth=10, width=6, height=1)
     boton_detener.place(x=850, y=550)
 
-    boton_si = tk.Button(window, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled",
-                         command=lambda: marcar_llegada("green"), relief="raised", borderwidth=10, width=6, height=1)
+    boton_si = tk.Button(window, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled", command=lambda: marcar_llegada("green"), relief="raised", borderwidth=10, width=6, height=1)
     boton_si.place(x=650, y=450)
 
-    boton_no = tk.Button(window, text="No llegó", font=("Calibri", 20), bg="red", state="disabled",
-                         command=lambda: marcar_llegada("red"), relief="raised", borderwidth=10, width=6, height=1)
+    boton_no = tk.Button(window, text="No llegó", font=("Calibri", 20), bg="red", state="disabled", command=lambda: marcar_llegada("red"), relief="raised", borderwidth=10, width=6, height=1)
     boton_no.place(x=650, y=550)
 
     combobox.bind("<<ComboboxSelected>>", actualizar_estado)
@@ -437,7 +445,7 @@ def interface():
     leg_animation = LegAnimation(window, canvas, video_path)
     TextUpdate(window, canvas)
 
-    connect_widgets(canvas)
+    disconnect_button, disconnect_button_image, connect_button_image, connect_button = connect_widgets(canvas)
 
     window.resizable(False, False)
     window.protocol("WM_DELETE_WINDOW", on_closing)
