@@ -13,147 +13,165 @@ _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
 ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 
-# Global variables for serial connection
-ser = None
-stop_threads = False
-
-
 class AppInterface:
-    def __init__(self,root):
-        self.geometry("1280x720")
-        self.configure(bg="white")
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+    def __init__(self, root):
+        self.root = root
+        self.root.geometry("1280x720")
+        self.root.configure(bg="white")
+        self.canvas = self.create_canvas()
+        self.leg_animation = None
+        self.ser = None
+        self.stop_threads = False
+        self.init_widgets()
+        self.video_setup()
 
-        self.frames = {}
+    def create_canvas(self):
+        canvas = tk.Canvas(
+            self.root,
+            bg="#FFFFFF",
+            height=720,
+            width=1280,
+            bd=0,
+            highlightthickness=0,
+            relief="ridge"
+        )
+        canvas.place(x=0, y=0)
+        return canvas
 
-        for F in (MainPage, AnotherPage):  # Add more pages as needed
-            page_name = F.__name__
-            frame = F(parent=self, controller=self)
-            self.frames[page_name] = frame
-            frame.place(x=0, y=0, relwidth=1, relheight=1)
-
-        self.show_frame("MainPage")
-
-    def show_frame(self, page_name):
-        frame = self.frames[page_name]
-        frame.tkraise()
-
-    def on_closing(self):
-        disconnect_arduino()
-        self.destroy()
-
-
-class MainPage(tk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.canvas = tk.Canvas(self, bg="#FFFFFF", height=720, width=1280, bd=0, highlightthickness=0, relief="ridge")
-        self.canvas.place(x=0, y=0)
-
+    def init_widgets(self):
         self.status_label = tk.Label(self.canvas, text="Not Connected", fg="red", font=("Arial", 14))
-        self.status_label.place(x=40, y=60)
-
+        self.status_label.place(x=40.0, y=60.0)
         self.connect_button = ttk.Button(self.canvas, text="Connect", command=self.connect_to_arduino)
-        self.connect_button.place(x=50, y=100, width=100, height=20)
+        self.connect_button.place(x=50.0, y=100.0, width=100.0, height=20.0)
+        self.disconnect_button = ttk.Button(self.canvas, text="Disconnect", command=self.disconnect_arduino, state="disabled")
+        self.disconnect_button.place(x=50.0, y=130.0, width=100.0, height=20.0)
+        self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
+        self.switch_button.place(x=50.0, y=160.0, width=120.0, height=20.0)
 
-        self.disconnect_button = ttk.Button(self.canvas, text="Disconnect", command=disconnect_arduino,
-                                            state="disabled")
-        self.disconnect_button.place(x=50, y=130, width=100, height=20)
-
-        # Load and display the animation
+    def video_setup(self):
         video_directory = Path(__file__).resolve().parent / "video"
         video_name = "Leg Sequence (4).mp4"
-        video_path = find_video_file(video_directory, video_name)
+        video_path = self.find_video_file(video_directory, video_name)
 
         if video_path:
             print(f"Video found: {video_path}")
-            self.leg_animation = LegAnimation(self, self.canvas, video_path)
+            self.leg_animation = LegAnimation(self.canvas, video_path)
         else:
             messagebox.showerror("Error", f"Video file '{video_name}' not found in '{video_directory}'.")
 
-    def connect_to_arduino(self):
-        global ser, stop_threads
+    def find_video_file(self, directory, video_name):
+        search_dir = Path(directory)
+        for file in search_dir.rglob(video_name):
+            if file.is_file():
+                return str(file)
+        return None
 
-        arduino_port = find_arduino_port()
+    def find_arduino_port(self):
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
+                return port.device
+        return None
+
+    def connect_to_arduino(self):
+        arduino_port = self.find_arduino_port()
         if arduino_port:
-            if ser is None:
+            if self.ser is None:
                 try:
-                    ser = serial.Serial(arduino_port, 115200, timeout=2)
+                    self.ser = serial.Serial(arduino_port, 115200, timeout=2)
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
-                    stop_threads = False
-                    reading_thread = threading.Thread(target=read_serial_port, args=(ser, self.leg_animation))
-                    reading_thread.start()
+                    self.stop_threads = False
+                    threading.Thread(target=self.read_serial_port, daemon=True).start()
                 except Exception as e:
-                    if ser:
-                        ser.close()
-                        ser = None
+                    messagebox.showerror("Error", f"Failed to connect: {e}")
+                    if self.ser:
+                        self.ser.close()
+                        self.ser = None
         else:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
+    def read_serial_port(self):
+        try:
+            while not self.stop_threads:
+                if self.ser and self.ser.is_open:
+                    data = self.ser.readline().decode().strip()
+                    if data:
+                        values = data.split(",")
+                        if len(values) >= 2:
+                            try:
+                                rad = abs(float(values[0]))
+                                position = (rad * 180) / math.pi
+                                torque = abs(float(values[1]))
+                                print(f"Position: {position}, Torque: {torque}")
+                                if self.leg_animation:
+                                    self.leg_animation.update_frame(position)
+                            except ValueError:
+                                print("Error: Invalid data format. Skipping this line.")
+                        else:
+                            print("Error: Insufficient data. Skipping this line.")
+                    else:
+                        print("Warning: No data received.")
+                else:
+                    break
+        except Exception as e:
+            print("Error reading the serial port:", e)
+            self.stop_threads = True
 
-class AnotherPage(tk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        label = tk.Label(self, text="This is another page!", font=("Arial", 20))
-        label.pack(pady=20)
+    def disconnect_arduino(self):
+        if self.ser and self.ser.is_open:
+            self.stop_threads = True
+            self.ser.close()
+            self.ser = None
+            self.status_label.config(text="Disconnected", fg="red")
+            self.connect_button.config(state="normal")
+            self.disconnect_button.config(state="disabled")
+            self.stop_threads = False
+
+    def switch_to_interface1(self):
+        self.canvas.place_forget()  # Hide the current interface
+        AppInterface1(self.root, self)  # Show the second interface
+
+    def show(self):
+        self.canvas.place(x=0, y=0)  # Show the current interface
+
+    def on_closing(self):
+        self.disconnect_arduino()
+        self.root.destroy()
 
 
-def find_video_file(directory, video_name):
-    search_dir = Path(directory)
-    for file in search_dir.rglob(video_name):
-        if file.is_file():
-            return str(file)
-    return None
+class AppInterface1:
+    def __init__(self, root, app_interface):
+        self.root = root
+        self.app_interface = app_interface
+        self.canvas = self.create_canvas()
+        self.init_widgets()
 
+    def create_canvas(self):
+        canvas = tk.Canvas(
+            self.root,
+            bg="#FFFFFF",
+            height=720,
+            width=1280,
+            bd=0,
+            highlightthickness=0,
+            relief="ridge"
+        )
+        canvas.place(x=0, y=0)
+        return canvas
 
-def find_arduino_port():
-    ports = serial.tools.list_ports.comports()
-    for port in ports:
-        if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
-            return port.device
-    return None
+    def init_widgets(self):
+        self.back_button = ttk.Button(self.canvas, text="Back to Main Interface", command=self.switch_to_main_interface)
+        self.back_button.place(x=50.0, y=100.0, width=150.0, height=20.0)
 
-
-def read_serial_port(arduino, leg_animation):
-    global stop_threads
-    try:
-        while not stop_threads:
-            if arduino and arduino.is_open:
-                data = arduino.readline().decode().strip()
-                if data:
-                    values = data.split(",")
-                    if len(values) >= 2:
-                        try:
-                            rad = abs(float(values[0]))
-                            position = (rad * 180) / math.pi
-                            torque = abs(float(values[1]))
-                            print(f"Position: {position}, Torque: {torque}")
-                            if leg_animation:
-                                leg_animation.update_frame(position)
-                        except ValueError:
-                            print("Error: Invalid data format.")
-            else:
-                break
-    except Exception as e:
-        print("Error reading the serial port:", e)
-        stop_threads = True
-
-
-def disconnect_arduino():
-    global ser, stop_threads
-    if ser and ser.is_open:
-        stop_threads = True
-        ser.close()
-        ser = None
+    def switch_to_main_interface(self):
+        self.canvas.place_forget()  # Hide the current interface
+        self.app_interface.show()  # Show the main interface
 
 
 class LegAnimation:
-    def __init__(self, root, canvas, video_path):
-        self.root = root
+    def __init__(self, canvas, video_path):
         self.canvas = canvas
         self.video_path = video_path
         self.frames = self.load_video_frames(video_path)
@@ -174,11 +192,8 @@ class LegAnimation:
         cap.release()
         return frames
 
-    def input_to_frame(self, position, total_frames):
-        return int(((position) / 150) * (total_frames - 1))
-
     def update_frame(self, position):
-        frame_index = self.input_to_frame(position, len(self.frames))
+        frame_index = int(((position) / 150) * (len(self.frames) - 1))
         frame = self.frames[frame_index]
         frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
         self.label.config(image=frame_image)
@@ -187,5 +202,7 @@ class LegAnimation:
 
 
 if __name__ == "__main__":
-    app = AppInterface()
-    app.mainloop()
+    root = tk.Tk()
+    app = AppInterface(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    root.mainloop()
