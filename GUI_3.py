@@ -18,9 +18,8 @@ ser = None
 stop_threads = False
 
 
-class AppInterface(tk.Tk):
-    def __init__(self):
-        super().__init__()
+class AppInterface:
+    def __init__(self,root):
         self.geometry("1280x720")
         self.configure(bg="white")
         self.resizable(False, False)
@@ -84,7 +83,6 @@ class MainPage(tk.Frame):
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
-
                     stop_threads = False
                     reading_thread = threading.Thread(target=read_serial_port, args=(ser, self.leg_animation))
                     reading_thread.start()
