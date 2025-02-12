@@ -1,7 +1,7 @@
 import cv2
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox, PhotoImage, Button
+from tkinter import ttk, messagebox, PhotoImage, Button, Label
 from pathlib import Path
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -87,6 +87,74 @@ def connect_widgets(canvas):
 
 def relative_to_assets(path: str) -> Path:
     return str(ASSETS_PATH / path)
+
+
+def name_entry_widget(canvas):
+    ruta_img = relative_to_assets("Entry_Label_Img.png")
+    image_widget = PhotoImage(file=ruta_img)
+
+    entry_bg_1 = canvas.create_image(
+        690.0,
+        60.0,
+        image=image_widget
+    )
+    entry_1 = Label(
+        bd=0,
+        bg="#acdccc",
+        fg="#000716",
+        highlightthickness=0,
+        state="normal",
+        font="Calibri 13"
+    )
+    entry_1.place(
+        x=415.0,
+        y=40.0,
+        width=300.0,
+        height=35.0
+    )
+    canvas.create_text(
+        252.0,
+        47,
+        anchor="nw",
+        text="Nombre de pac.",
+        fill="#000000",
+        font="Calibri 13"
+    )
+    return entry_1, image_widget
+
+
+def age_entry_widget(canvas):
+    ruta_img = relative_to_assets("EntryEdad_Label_Img.png")
+    image_widget = PhotoImage(file=ruta_img)
+
+    entry_bg_2 = canvas.create_image(
+        465.0,
+        130.0,
+        image=image_widget
+    )
+    entry_2 = Label(
+        bd=0,
+        bg="#acdccc",
+        fg="#000716",
+        highlightthickness=0,
+        state="normal",
+        font="Calibri 13"
+    )
+    entry_2.place(
+        x=415.0,
+        y=110.0,
+        width=80.0,
+        height=35.0
+    )
+    canvas.create_text(
+        345.0,
+        120,
+        anchor="nw",
+        text="Edad",
+        fill="#000000",
+        font="Calibri 13"
+    )
+    return entry_2, image_widget
 
 
 def find_arduino_port():
@@ -446,6 +514,8 @@ def interface():
     TextUpdate(window, canvas)
 
     disconnect_button, disconnect_button_image, connect_button_image, connect_button = connect_widgets(canvas)
+    entry_1, image_widget = name_entry_widget(canvas)
+    entry_2, entry_image2 = age_entry_widget(canvas)
 
     window.resizable(False, False)
     window.protocol("WM_DELETE_WINDOW", on_closing)
