@@ -265,25 +265,30 @@ def aplicar_cambios():
         nivel_num = int(nivel.split(" ")[1])
 
         if nivel_num == 4 and valor.isdigit() and int(valor) > 10:
-            mensaje_label.config(text="Límite de valor es 10 en Nivel 4", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
+            mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#000000")
             return
         elif nivel_num == 5 and valor.isdigit() and int(valor) > 20:
-            mensaje_label.config(text="Límite de valor es 20 en Nivel 5", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
+            mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
             return
         elif nivel_num in (4, 5) and ((not valor.strip() or not valor.isdigit()) or int(valor) == 0):
-            mensaje_label.config(text="ERROR. Ingrese un valor de fuerza", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
+            mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
             return
         if not verificar_niveles_anteriores(nivel_num):
             return
 
-        mensaje_label.config(text="Cambios aplicados correctamente", fg="#5BFF2F")
+        mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
+        mensaje_label2.config(text="correctamente", fg="#5BFF2F")
         #boton_iniciar.config(state="normal")
         #boton_detener.config(state="normal")
         entrada.config(state="disabled")
         combobox.config(state="disabled")
         boton_toggle.config(state="normal")
 
-    mensaje_label.after(5000, lambda: mensaje_label.config(text=""))
+    mensaje_label1.after(5000, lambda: mensaje_label1.config(text=""))
+    mensaje_label2.after(5000, lambda: mensaje_label2.config(text=""))
 
 def save_boton():
     messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
@@ -387,7 +392,7 @@ def marcar_llegada(color):
 
 def interface():
     global window, entry_image1, entry_image2, entry_image3, entry_image4, \
-        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save
+        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label1, mensaje_label2, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save
 
     window = tk.Tk()
     window.geometry("1000x720")
@@ -412,28 +417,30 @@ def interface():
     niveles = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
     combobox = ttk.Combobox(window, values=niveles, font=("Calibri", 14), width=20)
     combobox.set("Elija el nivel de fuerza")
-    combobox.place(x=50, y=555)
+    combobox.place(x=300, y=555)
     combobox.config(state="disabled")
 
     vcmd = window.register(validar_entrada)
     entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="white")
-    entrada.place(x=100, y=600)
+    entrada.place(x=350, y=600)
     entrada.config(state="disabled")
 
     boton_aplicar = tk.Button(window, text="Aplicar cambios", font=("Nunito", 14), command=aplicar_cambios, relief="raised", borderwidth=5, bg="white")
-    boton_aplicar.place(x=50, y=650)
+    boton_aplicar.place(x=300, y=650)
     boton_aplicar.config(state="disabled")
 
-    mensaje_label = tk.Label(window, text="", font=("Calibri", 16), bg="#000000")
-    mensaje_label.place(x=250, y=660)
+    mensaje_label1 = tk.Label(window, text="", font=("Calibri", 12), bg="#000000")
+    mensaje_label1.place(x=490, y=650)
+    mensaje_label2 = tk.Label(window, text="", font=("Calibri", 12), bg="#000000")
+    mensaje_label2.place(x=490, y=670)
 
     fuerzaT_label = tk.Label(window, text="F =", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
-    fuerzaT_label.place(x=50, y=600)
+    fuerzaT_label.place(x=300, y=600)
     fuerzaKg_label = tk.Label(window, text="Kg", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
-    fuerzaKg_label.place(x=250, y=600)
+    fuerzaKg_label.place(x=500, y=600)
 
     nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
-    nivelesF_label.place(x=50, y=520)
+    nivelesF_label.place(x=300, y=520)
 
     cuadros = []
     for i in range(5):
@@ -480,7 +487,7 @@ def interface():
     boton_no.place(x=820, y=570)
 
     status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#000000")
-    status_label.place(x=380, y=530)
+    status_label.place(x=50, y=530)
 
     connect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_CONECTAR.png"))
     connect_button = Button(
@@ -491,7 +498,7 @@ def interface():
         highlightthickness=2,
         relief="raised"
     )
-    connect_button.place(x=360, y=570, width=120, height=40)
+    connect_button.place(x=100, y=570, width=120, height=40)
 
     disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
     disconnect_button = Button(
@@ -503,7 +510,7 @@ def interface():
         highlightthickness=2,
         relief="raised"
     )
-    disconnect_button.place(x=500, y=570, width=120, height=40)
+    disconnect_button.place(x=100, y=630, width=120, height=40)
 
     combobox.bind("<<ComboboxSelected>>", actualizar_estado)
 
