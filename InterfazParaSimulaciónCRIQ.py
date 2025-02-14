@@ -8,38 +8,28 @@ import serial.tools.list_ports
 import serial
 import os
 import math
-
+import time
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
 ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 
 # Global variables for serial connection and widgets (flags)
-
-
 stop_threads = False
 cambio_conexion = 0
-
 rad = 0
 dist = 0.22
 gravity = 9.81
 
-
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
-
 def find_video_file(directory, video_name):
-
     search_dir = Path(directory)
-
-    # Search for the video file recursively
     for file in search_dir.rglob(video_name):
-        if file.is_file():  # Ensure it's a file (not a directory)
-            return str(file)  # Return the full path as a string
-
+        if file.is_file():
+            return str(file)
     return None
-
 
 def create_canvas(root):
     canvas = tk.Canvas(
@@ -54,7 +44,6 @@ def create_canvas(root):
     canvas.place(x=0, y=0)
     return canvas
 
-
 def connect_widgets(canvas):
     global status_label, disconnect_button, connect_button
 
@@ -65,7 +54,7 @@ def connect_widgets(canvas):
     connect_button = Button(
         window,
         image=connect_button_image,
-        command=connect_to_arduino,  # Sin paréntesis
+        command=connect_to_arduino,
         borderwidth=4,
         highlightthickness=2,
         relief="raised"
@@ -76,7 +65,7 @@ def connect_widgets(canvas):
     disconnect_button = Button(
         window,
         image=disconnect_button_image,
-        command=disconnect_arduino,  # Sin paréntesis
+        command=disconnect_arduino,
         state="disabled",
         bg="#8FFDCD",
         borderwidth=4,
@@ -86,11 +75,6 @@ def connect_widgets(canvas):
     disconnect_button.place(x=50.0, y=150.0, width=120.0, height=40.0)
 
     return disconnect_button, disconnect_button_image, connect_button, connect_button_image
-
-
-def relative_to_assets(path: str) -> Path:
-    return str(ASSETS_PATH / path)
-
 
 def name_entry_widget(canvas):
     ruta_img = relative_to_assets("NeonEntry.png")
@@ -124,7 +108,6 @@ def name_entry_widget(canvas):
         font="Calibri 13"
     )
     return entry_1, image_widget
-
 
 def age_entry_widget(canvas):
     ruta_img = relative_to_assets("EntryEdad_Label_Img.png")
@@ -173,132 +156,104 @@ def grados_widget(canvas):
 def connect_to_arduino():
     global cambio_conexion
     cambio_conexion = 1
-    if cambio_conexion == 1:  # Solo conectar si el simulador está en ON
+    if cambio_conexion == 1:
         status_label.config(text="Dispositivo Conectado", fg="#5BFF2F", font=("Calibri", 14))
-        connect_button.config(state="disabled")  # Deshabilitar el botón de conectar
-        disconnect_button.config(state="normal")  # Habilitar el botón de desconectar
+        connect_button.config(state="disabled")
+        disconnect_button.config(state="normal")
         combobox.config(state="normal")
         boton_aplicar.config(state="normal")
-
 
 def disconnect_arduino():
     cambio_conexion = 0
     if cambio_conexion == 0:
         status_label.config(text="Sin conexión", fg="red")
-        connect_button.config(state="normal")  # Habilitar el botón de conectar
-        disconnect_button.config(state="disabled")  # Deshabilitar el botón de desconectar
+        connect_button.config(state="normal")
+        disconnect_button.config(state="disabled")
         combobox.config(state="disabled")
         boton_aplicar.config(state="disabled")
 
-
-
 def on_closing():
-    #disconnect_arduino()
     window.destroy()
-
 
 class LegAnimation:
     def __init__(self, root, canvas, video_path):
-
         self.root = root
         self.canvas = canvas
         self.text_id = self.canvas.create_text(
-            655, 330,  # Coordinates (x, y)
-            text="0°",  # Text content
-            font=("Calibri", 16),  # Font and size
-            fill="#FFFFFF"  # Text color
+            655, 330,
+            text="0°",
+            font=("Calibri", 16),
+            fill="#FFFFFF"
         )
         self.video_path = video_path
-
-
-        # Load video frames
         self.frames = self.load_video_frames(video_path)
-
-        # Create a label to display the video frame
         self.label = tk.Label(self.canvas)
-        self.label.place(x=100, y=135)  # Place the label
-
-
-
-
-        # Initialize with the first frame
-        self.update_frame(0)  # Start with position 0
+        self.label.place(x=100, y=135)
+        self.position = 0
+        self.direction = 1  # 1 para incrementar, -1 para decrementar
+        self.animation_thread = None
+        self.animation_active = False
+        self.update_frame(0)
 
     def load_video_frames(self, video_path):
-        """Load the video and extract frames."""
         cap = cv2.VideoCapture(video_path)
         frames = []
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-            # Convert BGR (OpenCV) to RGB (PIL/Tkinter)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
         cap.release()
         return frames
 
     def input_to_frame(self, position, total_frames):
-        """Map position value (in degrees) to frame index."""
-        # Map 0° to 150° to 0 to (total_frames - 1)
-
-        return int(((position) / 150) * (total_frames - 1))
+        return int((position / 150) * (total_frames - 1))
 
     def update_frame(self, position):
-        """Update the displayed frame based on position value."""
         frame_index = self.input_to_frame(position, len(self.frames))
         frame = self.frames[frame_index]
         frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
         self.label.config(image=frame_image)
-        self.label.image = frame_image  # Keep a reference to avoid garbage collection
-
-        # Update the text with the current position value
+        self.label.image = frame_image
         self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
 
+    def start_animation(self):
+        if not self.animation_active:
+            self.animation_active = True
+            self.animation_thread = threading.Thread(target=self.run_animation)
+            self.animation_thread.start()
 
-class TextUpdate:
-    def __init__(self, root, canvas):
-        self.root = root
-        self.canvas = canvas
+    def stop_animation(self):
+        self.animation_active = False
+        if self.animation_thread:
+            self.animation_thread.join()
+        self.position = 0  # Reiniciar la posición a 0
+        self.update_frame(self.position)  # Actualizar el frame y el texto
 
-        self.canvas.create_rectangle(610, 310, 680, 350, outline='black', fill='', width=1)
+    def run_animation(self):
+        while self.animation_active:
+            if self.position >= 150:
+                self.direction = -1
+            elif self.position <= 0:
+                self.direction = 1
 
-        self.canvas.create_text(
-            345, 105,  # Coordinates (x, y)
-            text="Ángulo",  # Text content
-            font=("Calibri", 18),  # Font and size
-            fill="#FFFFFF"  # Text color
-        )
+            self.position += 1 * self.direction
+            self.update_frame(self.position)
+            time.sleep(0.1)
+
+def toggle_boton():
+    if boton_toggle["text"] == "Iniciar":
+        leg_animation.start_animation()
+        iniciar_animacion()
+        boton_toggle.config(text="Detener", command=toggle_boton)
+    else:
+        leg_animation.stop_animation()
+        detener_animacion()
+        boton_toggle.config(text="Iniciar", command=toggle_boton)
 
 def validar_entrada(text):
     return text.isdigit() or text == ""
-
-
-def actualizar_estado(event=None):
-    # Habilita la entrada solo si Nivel 4 o Nivel 5 están seleccionados
-    if combobox.get() in ["Nivel 4", "Nivel 5"]:
-        entrada.config(state="normal")
-    else:
-        entrada.config(state="disabled")
-        entrada.delete(0, tk.END)
-
-
-def verificar_niveles_anteriores(nivel_actual):
-    # Pregunta solo si es la primera vez seleccionando un nivel mayor a 1
-    if nivel_actual > 1 and not niveles_superados[nivel_actual - 1]:
-        respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
-        if respuesta == "yes":
-            for i in range(nivel_actual - 1):
-                cuadros[4 - i].config(bg="green")
-                niveles_superados[i] = True
-            return True
-        else:
-            messagebox.showwarning("Aviso", "Por favor, seleccione el nivel faltante para hacer los test de forma correcta.")
-            combobox.set("Seleccionar el nivel")
-            return False
-    return True
-
-
 
 def aplicar_cambios():
     nivel = combobox.get()
@@ -328,6 +283,40 @@ def aplicar_cambios():
 
     mensaje_label.after(5000, lambda: mensaje_label.config(text=""))
 
+def save_boton():
+    messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+    boton_save.config(state="disabled")
+    entrada.config(state="disabled")
+    cuadros[4].config(bg="#FFFFFF")
+    cuadros[3].config(bg="#FFFFFF")
+    cuadros[2].config(bg="#FFFFFF")
+    cuadros[1].config(bg="#FFFFFF")
+    cuadros[0].config(bg="#FFFFFF")
+
+    disconnect_arduino()
+
+def actualizar_estado(event=None):
+    # Habilita la entrada solo si Nivel 4 o Nivel 5 están seleccionados
+    if combobox.get() in ["Nivel 4", "Nivel 5"]:
+        entrada.config(state="normal")
+    else:
+        entrada.config(state="disabled")
+        entrada.delete(0, tk.END)
+
+def verificar_niveles_anteriores(nivel_actual):
+    # Pregunta solo si es la primera vez seleccionando un nivel mayor a 1
+    if nivel_actual > 1 and not niveles_superados[nivel_actual - 1]:
+        respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
+        if respuesta == "yes":
+            for i in range(nivel_actual - 1):
+                cuadros[4 - i].config(bg="green")
+                niveles_superados[i] = True
+            return True
+        else:
+            messagebox.showwarning("Aviso", "Por favor, seleccione el nivel faltante para hacer los test de forma correcta.")
+            combobox.set("Seleccionar el nivel")
+            return False
+    return True
 
 def iniciar_animacion():
     nivel = combobox.get()
@@ -346,7 +335,6 @@ def iniciar_animacion():
             entrada.config(state="disabled")
             boton_save.config(state="disabled")
             boton_toggle.config(text="Detener", command=detener_animacion)
-
 
 def parpadear(cuadro):
     global animacion_activa, blink_state
@@ -370,6 +358,7 @@ def detener_animacion():
     #boton_detener.config(state="disabled")
     boton_toggle.config(text="Iniciar", command=iniciar_animacion, state="disabled")
     boton_save.config(state="normal")
+    leg_animation.stop_animation()
     if nivel.startswith("Nivel "):
         nivel_num = int(nivel.split(" ")[1])
         if nivel_num > 3:
@@ -393,18 +382,6 @@ def marcar_llegada(color):
             niveles_superados[nivel_num - 1] = True
             entrada.config(state="normal")
 
-def toggle_boton():
-    if boton_toggle["text"] == "Iniciar":
-        iniciar_animacion()
-    else:
-        detener_animacion()
-
-def save_boton():
-    messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
-    boton_save.config(state="disabled")
-    entry_1.config(text="")
-    disconnect_arduino()
-
 
 def interface():
     global window, entry_image1, entry_image2, entry_image3, entry_image4, \
@@ -417,13 +394,9 @@ def interface():
     canvas = create_canvas(window)
     canvas.configure(background='#000000')
 
-    TextUpdate(window, canvas)
 
-    video_directory = Path(__file__).resolve().parent / "video"  # Search in the "video" folder
-    video_name = "Leg Sequence_5.mp4"  # Name of the video file
-
-    # Automatically detect the video path
-
+    video_directory = Path(__file__).resolve().parent / "video"
+    video_name = "Leg Sequence_5.mp4"
     video_path = find_video_file(video_directory, video_name)
     leg_animation = LegAnimation(window, canvas, video_path)
 
@@ -472,30 +445,23 @@ def interface():
     grados_label = tk.Label(window, text="Grados", font=("Calibri", 14), bg="#000000", fg="#FFFFFF")
     grados_label.place(x=610, y=280)
 
-    """
-    boton_iniciar = tk.Button(window, text="Iniciar", font=("Calibri", 20), command=iniciar_animacion, state="disabled", borderwidth=10, width=6, height=1)
-    boton_iniciar.place(x=850, y=450)
-
-    boton_detener = tk.Button(window, text="Detener", font=("Calibri", 20), command=detener_animacion, state="disabled", borderwidth=10, width=6, height=1)
-    boton_detener.place(x=850, y=550)
-    """
     boton_toggle = tk.Button(
-    window,
-    text="Iniciar",  # Texto inicial
-    font=("Calibri", 16),
-    command=toggle_boton,  # Función que se ejecuta al presionar el botón
-    state="normal",  # Habilitar el botón
-    borderwidth=8,
-    width=6,
-    height=1)
+        window,
+        text="Iniciar",
+        font=("Calibri", 16),
+        command=toggle_boton,
+        state="normal",
+        borderwidth=8,
+        width=6,
+        height=1)
     boton_toggle.place(x=745, y=500)
     boton_toggle.config(state="disabled")
 
     boton_save = tk.Button(
         window,
-        text="Guardar Resultados",  # Texto inicial
+        text="Guardar Resultados",
         font=("Calibri", 16),
-        state="normal",  # Habilitar el botón
+        state="normal",
         borderwidth=8,
         width=14,
         height=1,
@@ -518,7 +484,7 @@ def interface():
     connect_button = Button(
         window,
         image=connect_button_image,
-        command=connect_to_arduino,  # Sin paréntesis
+        command=connect_to_arduino,
         borderwidth=4,
         highlightthickness=2,
         relief="raised"
@@ -529,7 +495,7 @@ def interface():
     disconnect_button = Button(
         window,
         image=disconnect_button_image,
-        command=disconnect_arduino,  # Sin paréntesis
+        command=disconnect_arduino,
         state="disabled",
         borderwidth=4,
         highlightthickness=2,
@@ -541,18 +507,12 @@ def interface():
 
     niveles_superados = [False] * 5
 
-
-
-
-    # connect_button, connect_button_image, disconnect_button, disconnect_button_image = connect_widgets(canvas)
     entry_1, image_widget = name_entry_widget(canvas)
-    #entry_2, entry_image2 = age_entry_widget(canvas)
     image_widget3 = grados_widget(canvas)
 
     window.resizable(False, False)
     window.protocol("WM_DELETE_WINDOW", on_closing)
     window.mainloop()
-
 
 animacion_activa = False
 blink_state = True
