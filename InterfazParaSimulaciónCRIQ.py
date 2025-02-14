@@ -165,12 +165,14 @@ def connect_to_arduino():
 
 def disconnect_arduino():
     cambio_conexion = 0
-    if cambio_conexion == 0:
+    if cambio_conexion == 0 and boton_toggle["text"] == "Iniciar":
         status_label.config(text="Sin conexión", fg="red")
         connect_button.config(state="normal")
         disconnect_button.config(state="disabled")
         combobox.config(state="disabled")
         boton_aplicar.config(state="disabled")
+    elif cambio_conexion == 0 and boton_toggle["text"] == "Detener":
+        messagebox.showwarning("ERROR", "No se puede desconectar mientras el dispositivo está en funcionamiento")
 
 def on_closing():
     window.destroy()
