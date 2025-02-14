@@ -8,6 +8,7 @@ import serial.tools.list_ports
 import serial
 import os
 import math
+import time
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -31,6 +32,7 @@ def find_video_file(directory, video_name):
 
 class AppInterface:
     def __init__(self, root):
+        self.send_data = None
         self.level = None
         self.value = None
         self.text = None
@@ -56,9 +58,6 @@ class AppInterface:
         self.create_combo_widget()
         self.apply_combox_changes()
 
-
-
-
     def create_canvas(self):
         canvas = tk.Canvas(
             self.root,
@@ -83,6 +82,13 @@ class AppInterface:
         self.disconnect_button.place(x=50.0, y=150.0, width=120.0, height=40.0)
         self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
         self.switch_button.place(x=50.0, y=200.0, width=120.0, height=20.0)
+
+        self.turn_on_motor_widget = Button(self.canvas, text="Turn On", command=self.turn_on_motor)
+        self.turn_on_motor_widget.place(x=50, y=250, width=100.0, height=20.0)
+        self.turn_off_motor_widget = Button(self.canvas, text="Turn Off", command=self.turn_off_motor)
+        self.turn_off_motor_widget.place(x=50, y=300, width=100.0, height=20.0)
+
+
 
     def video_setup(self):
         video_directory = Path(__file__).resolve().parent / "video"
@@ -136,17 +142,36 @@ class AppInterface:
             print("Error reading the serial port:", e)
             self.stop_threads = True
 
+    def send_serial_port(self):
+        try:
+            while not self.stop_threads is True:
+                time.sleep(0.50)
+        except Exception as e:
+            print("Error sending data",e)
+            self.stop_threads = True
+
     def connect_to_arduino(self):
         arduino_port = self.find_arduino_port()
         if arduino_port:
             if self.ser is None:
                 try:
+                    self.arduino_lock = threading.Lock()
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
                     self.stop_threads = False
-                    threading.Thread(target=self.read_serial_port, daemon=True).start()
+                    reading_thread = threading.Thread(target=self.read_serial_port, daemon=True)
+                    reading_thread.start()
+
+
+                    sending_thread = threading.Thread(target=self.send_data, args=(self.ser,))
+                    sending_thread.start()
+                    
+                    sending_thread.join()
+
+                    reading_thread.join()
+
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to connect: {e}")
                     if self.ser:
@@ -369,7 +394,7 @@ class AppInterface:
             if nivel_num > 3:
                 self.user_input.config(state="normal")
 
-    def highlight(self,color):
+    def highlight(self, color):
         self.level3 = self.combobox.get()
 
         if self.level3.startswith("Nivel "):
@@ -384,6 +409,33 @@ class AppInterface:
                 self.squares[5 - level_num].config(bg=color)
                 self.achieved_levels[level_num - 1] = True
                 self.user_input.config(state="normal")
+
+    def send_value(self, event):
+        cadena = str(self.combobox.get())
+        self.arduino_lock.acquire()
+        time.sleep(0.02)
+        self.ser.write(cadena.encode('ascii'))
+        time.sleep(0.02)
+        self.arduino_lock.release()
+        print(self.combobox.get())
+
+    def turn_on_motor(self):
+        if self.ser is not None:
+            cadena = str(998)
+            self.arduino_lock.acquire()
+            time.sleep(0.02)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.02)
+            self.arduino_lock.release()
+
+    def turn_off_motor(self):
+        if self.ser is not None:
+            cadena = str(999)
+            self.arduino_lock.acquire()
+            time.sleep(0.02)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.02)
+            self.arduino_lock.release()
 
     def switch_to_interface1(self):
         self.canvas.place_forget()  # Hide the current interface
