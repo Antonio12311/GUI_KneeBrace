@@ -1,7 +1,7 @@
 import cv2
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox, PhotoImage, Button, Label
+from tkinter import ttk, messagebox, PhotoImage, Button, Label, Entry
 from pathlib import Path
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -52,7 +52,8 @@ class AppInterface:
         self.serial_widgets()
         self.video_setup()
         self.name_entry_widget()
-        self.age_entry_widget()
+        self.grados_widget()
+        # self.age_entry_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
 
@@ -73,20 +74,20 @@ class AppInterface:
         return canvas
 
     def serial_widgets(self):
-        self.status_label = tk.Label(self.canvas, text="Not Connected", fg="red", font=("Arial", 14))
-        self.status_label.place(x=45.0, y=60.0)
+        self.status_label = tk.Label(self.canvas, text="Not Connected", fg="red", font=("Arial", 14), bg="#FFFFFF")
+        self.status_label.place(x=50, y=530)
         self.connect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_CONECTAR.png"))
         self.connect_button = Button(self.canvas, image=self.connect_button_image, text="Connect", command=self.connect_to_arduino)
-        self.connect_button.place(x=50.0, y=100.0, width=120.0, height=40.0)
+        self.connect_button.place(x=100, y=570, width=120, height=40)
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
         self.disconnect_button = Button(self.canvas, image=self.disconnect_button_image, text="Disconnect", command=self.disconnect_arduino, state="disabled")
-        self.disconnect_button.place(x=50.0, y=150.0, width=120.0, height=40.0)
+        self.disconnect_button.place(x=100, y=620, width=120, height=40)
         self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
-        self.switch_button.place(x=50.0, y=200.0, width=120.0, height=20.0)
+        self.switch_button.place(x=20, y=680, width=120, height=20)
 
     def video_setup(self):
         video_directory = Path(__file__).resolve().parent / "video"
-        video_name = "Leg Sequence (4).mp4"
+        video_name = "Leg Sequence_5.mp4"
         video_path = self.find_video_file(video_directory, video_name)
 
         if video_path:
@@ -145,6 +146,8 @@ class AppInterface:
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
+                    self.combobox.config(state="normal")
+                    self.apply_button_widget.config(state="normal")
                     self.stop_threads = False
                     threading.Thread(target=self.read_serial_port, daemon=True).start()
                 except Exception as e:
@@ -166,37 +169,47 @@ class AppInterface:
             self.stop_threads = False
 
     def name_entry_widget(self):
-        self.ruta_img = relative_to_assets("Entry_Label_Img.png")
+        self.ruta_img = relative_to_assets("NeonEntry.png")
         self.image_widget = PhotoImage(file=self.ruta_img)
 
         entry_bg_1 = self.canvas.create_image(
-            690.0,
-            60.0,
+            480.0,
+            50.0,
             image=self.image_widget
         )
-        self.entry_1 = Label(
+        self.entry_1 = Entry(
             bd=0,
-            bg="#acdccc",
-            fg="#000716",
+            bg="#FFFFFF",
+            fg="#000000",
             highlightthickness=0,
             state="normal",
             font="Calibri 13"
         )
         self.entry_1.place(
-            x=415.0,
-            y=40.0,
+            x=200.0,
+            y=32.0,
             width=300.0,
             height=35.0
         )
         self.canvas.create_text(
-            252.0,
-            47,
+            40,
+            40,
             anchor="nw",
             text="Nombre de pac.",
             fill="#000000",
             font="Calibri 13"
         )
 
+    def grados_widget(self):
+        self.ruta_img = relative_to_assets("ThetaBox.png")
+        self.image_widget3 = PhotoImage(file=self.ruta_img)
+
+        box_bg_1 = self.canvas.create_image(
+            648.0,
+            329.0,
+            image=self.image_widget3
+        )
+    """
     def age_entry_widget(self):
         self.ruta_img1 = relative_to_assets("EntryEdad_Label_Img.png")
         self.image_widget1 = PhotoImage(file=self.ruta_img1)
@@ -228,6 +241,7 @@ class AppInterface:
             fill="#000000",
             font="Calibri 13"
         )
+        """
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -257,54 +271,81 @@ class AppInterface:
 
     def create_combo_widget(self):
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
-        self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Calibri", 16), width=20)
+        self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Calibri", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
         self.combobox.config(state="readonly")  # Make the combobox readonly
-        self.combobox.place(x=50, y=350)
+        self.combobox.place(x=300, y=555)
+        self.combobox.config(state="disabled")
 
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Calibri", 16), width=10, validate="key",
                               validatecommand=(self.cmd_entry, "%P"), bg="white")
-        self.user_input.place(x=100, y=420)
+        self.user_input.place(x=350, y=600)
         self.user_input.config(state="disabled")
 
         self.apply_button_widget = tk.Button(self.canvas, text="Aplicar cambios", font=("Nunito", 14),
                                              command=self.apply_combox_changes, relief="raised", borderwidth=5, bg="white")
-        self.apply_button_widget.place(x=50, y=530)
+        self.apply_button_widget.place(x=300, y=650)
+        self.apply_button_widget.config(state="disabled")
 
-        self.message_label = tk.Label(self.canvas, text="", font=("Calibri", 16), bg="#8FFDCD")
-        self.message_label.place(x=50, y=600)
+        self.message_label1 = tk.Label(self.canvas, text="", font=("Calibri", 12), bg="#FFFFFF")
+        self.message_label1.place(x=490, y=650)
+        self.message_label2 = tk.Label(self.canvas, text="", font=("Calibri", 12), bg="#FFFFFF")
+        self.message_label2.place(x=490, y=670)
 
-        self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Calibri", 18), bg="#8FFDCD")
-        self.strengthT_label.place(x=50, y=420)
-        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Calibri", 18), bg="#8FFDCD")
-        self.strengthKG_label.place(x=250, y=420)
+        self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Calibri", 18), bg="#FFFFFF", fg="#000000")
+        self.strengthT_label.place(x=300, y=600)
+        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Calibri", 18), bg="#FFFFFF", fg="#000000")
+        self.strengthKG_label.place(x=500, y=600)
 
         for i in range(5):
             self.square_widget = tk.Label(self.canvas, text=str(5 - i), font=("Arial", 14), width=11, height=3, relief="solid",
                               bg="white")
-            self.square_widget.place(x=450, y=610 - (i * 70))
+            self.square_widget.place(x=750, y=410 - (i * 70))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Calibri", 14), bg="#8FFDCD")
-        self.titleC_label.place(x=473, y=300)
+        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Calibri", 18), bg="#FFFFFF", fg="#000000")
+        self.titleC_label.place(x=761, y=90)
 
-        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20), command=self.start_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
-        self.start_button_widget.place(x=850, y=450)
+        self.grados_label = tk.Label(self.canvas, text="Grados", font=("Calibri", 14), bg="#FFFFFF", fg="#000000")
+        self.grados_label.place(x=610, y=280)
 
-        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20), command=self.stop_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
-        self.stop_button_widget.place(x=850, y=550)
+        self.boton_toggle = tk.Button(
+            self.canvas,
+            text="Iniciar",
+            font=("Calibri", 16),
+            command=self.toggle_boton,
+            state="normal",
+            borderwidth=8,
+            width=6,
+            height=1)
+        self.boton_toggle.place(x=745, y=500)
+        self.boton_toggle.config(state="disabled")
 
-        self.yes_button_widget = tk.Button(self.canvas, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled",
-                             command=lambda: self.highlight("green"), relief="raised", borderwidth=10, width=6,
+        self.boton_save = tk.Button(
+            self.canvas,
+            text="Guardar Resultados",
+            font=("Calibri", 16),
+            state="normal",
+            borderwidth=8,
+            width=14,
+            height=1,
+            bg="#FF51C9",
+            fg="#FFFFFF",
+            command=self.save_boton)
+        self.boton_save.place(x=690, y=640)
+        self.boton_save.config(state="disabled")
+
+
+
+        self.yes_button_widget = tk.Button(self.canvas, text="Si llegó", font=("Calibri", 16), bg="green", state="disabled",
+                             command=lambda: self.highlight("green"), relief="raised", borderwidth=8, width=6,
                              height=1)
-        self.yes_button_widget.place(x=650, y=450)
+        self.yes_button_widget.place(x=670, y=570)
 
-        self.no_button_widget = tk.Button(self.canvas, text="No llegó", font=("Calibri", 20), bg="red", state="disabled",
-                             command=lambda: self.highlight("red"), relief="raised", borderwidth=10, width=6, height=1)
-        self.no_button_widget.place(x=650, y=550)
+        self.no_button_widget = tk.Button(self.canvas, text="No llegó", font=("Calibri", 16), bg="red", state="disabled",
+                             command=lambda: self.highlight("red"), relief="raised", borderwidth=8, width=6, height=1)
+        self.no_button_widget.place(x=820, y=570)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
@@ -329,13 +370,14 @@ class AppInterface:
             if not self.check_last_lvl(level_num):
                 return
 
-            self.message_label.config(text="Cambios aplicados correctamente", fg="green")
-            self.start_button_widget.config(state="normal")
-            self.stop_button_widget.config(state="normal")
+            self.message_label1.config(text="Cambios aplicados", fg="green")
+            self.message_label2.config(text="correctamente", fg="green")
+            self.boton_toggle.config(state="normal")
             self.user_input.config(state="disabled")
             self.combobox.config(state="disabled")
 
-        self.message_label.after(5000, lambda: self.message_label.config(text=""))
+        self.message_label1.after(5000, lambda: self.message_label1.config(text=""))
+        self.message_label2.after(5000, lambda: self.message_label2.config(text=""))
 
     def start_animation(self):
         self.level1 = self.combobox.get()
@@ -385,6 +427,26 @@ class AppInterface:
                 self.achieved_levels[level_num - 1] = True
                 self.user_input.config(state="normal")
 
+    def toggle_boton(self):
+        if self.boton_toggle["text"] == "Iniciar":
+            self.start_animation()
+            self.boton_toggle.config(text="Detener", command=self.toggle_boton)
+        else:
+            self.stop_animation()
+            self.boton_toggle.config(text="Iniciar", command=self.toggle_boton)
+
+    def save_boton(self):
+        messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+        self.boton_save.config(state="disabled")
+        self.user_input.config(state="disabled")
+        self.squares[4].config(bg="#FFFFFF")
+        self.squares[3].config(bg="#FFFFFF")
+        self.squares[2].config(bg="#FFFFFF")
+        self.squares[1].config(bg="#FFFFFF")
+        self.squares[0].config(bg="#FFFFFF")
+
+        self.disconnect_arduino()
+
     def switch_to_interface1(self):
         self.canvas.place_forget()  # Hide the current interface
         AppInterphase1(self.root, self)  # Show the second interface
@@ -432,15 +494,15 @@ class LegAnimation:
         self.video_path = video_path
         self.frames = self.load_video_frames(video_path)
         self.label = tk.Label(self.canvas)
-        self.label.place(x=680, y=150)
-        self.text_id = self.canvas.create_text(645, 250, text="0°", font=("Arial", 16), fill="black")
+        self.label.place(x=100, y=135)
+        self.text_id = self.canvas.create_text(655, 330, text="0°", font=("Arial", 16), fill="black")
         self.update_frame(0)
 
-        self.canvas.create_rectangle(600, 230, 670, 270, outline='black', fill='', width=1)
+        #self.canvas.create_rectangle(600, 230, 670, 270, outline='black', fill='', width=1)
 
         self.canvas.create_text(
-            830, 130,  # Coordinates (x, y)
-            text="Ángulo",  # Text content
+            345, 115,  # Coordinates (x, y)
+            text="Posición de la pierna",  # Text content
             font=("Calibri", 16),  # Font and size
             fill="black"  # Text color
         )
