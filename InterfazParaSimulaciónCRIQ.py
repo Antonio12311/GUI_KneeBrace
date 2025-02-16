@@ -9,6 +9,7 @@ import serial
 import os
 import math
 import time
+from math import pi, cos, sin
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -24,12 +25,56 @@ gravity = 9.81
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
-def find_video_file(directory, video_name):
-    search_dir = Path(directory)
-    for file in search_dir.rglob(video_name):
-        if file.is_file():
-            return str(file)
-    return None
+class Meter(tk.Frame):
+    def __init__(self, master=None, **kw):
+        tk.Frame.__init__(self, master, **kw)
+
+        self.var = tk.IntVar(self, 0)
+
+        self.canvas = tk.Canvas(self, width=300, height=242,
+                                borderwidth=0, relief='sunken',
+                                bg='white')  # bg means background
+        self.scale = tk.Scale(self, orient='horizontal', from_=0, to=180, variable=self.var)
+
+        # Create the needle (line)
+        self.meter = self.canvas.create_line(1000000, 15000000, 1000000, 15000000,
+                                             fill='black',
+                                             width=3,
+                                             arrow='last')
+
+        self.updateMeterLine(0)  # Initialize the needle position
+
+        # Create the arc
+        self.canvas.create_arc(30, 30, 200, 200, extent=140, start=230,
+                               style='arc', outline='red')
+
+        self.canvas.pack(fill='both')  # Adds the canvas to the window
+        self.scale.pack()  # Adds the scale widget to the window
+
+        self.var.trace_add('write', self.updateMeter)
+
+    def updateMeterLine(self, a):
+        # Convert the normalized value `a` to an angle in radians
+        start_angle = 245  # Start angle of the arc
+        extent = 115  # Extent of the arc
+        angle_deg = start_angle + a * extent  # Calculate the angle in degrees
+        angle_rad = angle_deg * (pi / 180)  # Convert to radians
+
+        # Calculate the endpoint of the needle
+        x = 100 + 85 * cos(angle_rad)  # 100 is the center of the canvas
+        y = 100 - 85 * sin(angle_rad)
+
+        # Update the needle's position
+        self.canvas.coords(self.meter, 100, 100, x, y)
+
+    def updateMeter(self, name1, name2, op):
+        """Convert variable to angle on trace"""
+        mini = self.scale.cget('from')
+        maxi = self.scale.cget('to')
+        pos = (self.var.get() - mini) / (maxi - mini)  # Normalized position (0 to 1)
+        self.updateMeterLine(pos)  # Update the needle position
+
+
 
 def create_canvas(root):
     canvas = tk.Canvas(
@@ -87,8 +132,8 @@ def name_entry_widget(canvas):
     )
     entry_1 = Entry(
         bd=0,
-        bg="#000000",
-        fg="#FFFFFF",
+        bg="#FFFFFF",
+        fg="#000000",
         highlightthickness=0,
         state="normal",
         font="Calibri 13"
@@ -104,7 +149,7 @@ def name_entry_widget(canvas):
         40,
         anchor="nw",
         text="Nombre de pac.",
-        fill="#FFFFFF",
+        fill="#000000",
         font="Calibri 13"
     )
     return entry_1, image_widget
@@ -177,82 +222,20 @@ def disconnect_arduino():
 def on_closing():
     window.destroy()
 
-class LegAnimation:
-    def __init__(self, root, canvas, video_path):
-        self.root = root
-        self.canvas = canvas
-        self.text_id = self.canvas.create_text(
-            655, 330,
-            text="0°",
-            font=("Calibri", 16),
-            fill="#FFFFFF"
-        )
-        self.video_path = video_path
-        self.frames = self.load_video_frames(video_path)
-        self.label = tk.Label(self.canvas)
-        self.label.place(x=100, y=135)
-        self.position = 0
-        self.direction = 1  # 1 para incrementar, -1 para decrementar
-        self.animation_thread = None
-        self.animation_active = False
-        self.update_frame(0)
 
-    def load_video_frames(self, video_path):
-        cap = cv2.VideoCapture(video_path)
-        frames = []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame)
-        cap.release()
-        return frames
-
-    def input_to_frame(self, position, total_frames):
-        return int((position / 150) * (total_frames - 1))
-
-    def update_frame(self, position):
-        frame_index = self.input_to_frame(position, len(self.frames))
-        frame = self.frames[frame_index]
-        frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
-        self.label.config(image=frame_image)
-        self.label.image = frame_image
-        self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
-
-    def start_animation(self):
-        if not self.animation_active:
-            self.animation_active = True
-            self.animation_thread = threading.Thread(target=self.run_animation)
-            self.animation_thread.start()
-
-    def stop_animation(self):
-        self.animation_active = False
-        if self.animation_thread:
-            self.animation_thread.join()
-        self.position = 0  # Reiniciar la posición a 0
-        self.update_frame(self.position)  # Actualizar el frame y el texto
-
-    def run_animation(self):
-        while self.animation_active:
-            if self.position >= 150:
-                self.direction = -1
-            elif self.position <= 0:
-                self.direction = 1
-
-            self.position += 1 * self.direction
-            self.update_frame(self.position)
-            time.sleep(0.1)
 
 def toggle_boton():
     if boton_toggle["text"] == "Iniciar":
-        leg_animation.start_animation()
         iniciar_animacion()
         boton_toggle.config(text="Detener", command=toggle_boton)
     else:
-        leg_animation.stop_animation()
         detener_animacion()
         boton_toggle.config(text="Iniciar", command=toggle_boton)
+        cuadros[4].config(bg="#FFFFFF")
+        cuadros[3].config(bg="#FFFFFF")
+        cuadros[2].config(bg="#FFFFFF")
+        cuadros[1].config(bg="#FFFFFF")
+        cuadros[0].config(bg="#FFFFFF")
 
 def validar_entrada(text):
     return text.isdigit() or text == ""
@@ -365,7 +348,6 @@ def detener_animacion():
     #boton_detener.config(state="disabled")
     boton_toggle.config(text="Iniciar", command=iniciar_animacion, state="disabled")
     boton_save.config(state="normal")
-    leg_animation.stop_animation()
     if nivel.startswith("Nivel "):
         nivel_num = int(nivel.split(" ")[1])
         if nivel_num > 3:
@@ -397,22 +379,12 @@ def interface():
     window = tk.Tk()
     window.geometry("1000x720")
     window.title("Knee Brace GUI")
-    window.configure(background='#000000')
+    window.configure(background='#FFFFFF')
     canvas = create_canvas(window)
-    canvas.configure(background='#000000')
+    canvas.configure(background='#FFFFFF')
 
 
-    video_directory = Path(__file__).resolve().parent / "video"
-    video_name = "Leg Sequence_5.mp4"
-    video_path = find_video_file(video_directory, video_name)
-    leg_animation = LegAnimation(window, canvas, video_path)
 
-    if video_path:
-        print(f"Video found: {video_path}")
-    else:
-        print(f"Error: Video file '{video_name}' not found in '{video_directory}'.")
-        messagebox.showerror("Error", f"Video file '{video_name}' not found in '{video_directory}'.")
-        return
 
     niveles = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
     combobox = ttk.Combobox(window, values=niveles, font=("Calibri", 14), width=20)
@@ -489,28 +461,22 @@ def interface():
     status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#000000")
     status_label.place(x=50, y=530)
 
-    connect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_CONECTAR.png"))
+    connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
     connect_button = Button(
         window,
         image=connect_button_image,
         command=connect_to_arduino,
-        borderwidth=4,
-        highlightthickness=2,
-        relief="raised"
     )
-    connect_button.place(x=100, y=570, width=120, height=40)
+    connect_button.place(x=100, y=570,)
 
-    disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
+    disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN1.png"))
     disconnect_button = Button(
         window,
         image=disconnect_button_image,
         command=disconnect_arduino,
         state="disabled",
-        borderwidth=4,
-        highlightthickness=2,
-        relief="raised"
     )
-    disconnect_button.place(x=100, y=630, width=120, height=40)
+    disconnect_button.place(x=100, y=630)
 
     combobox.bind("<<ComboboxSelected>>", actualizar_estado)
 
