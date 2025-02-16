@@ -1,9 +1,7 @@
-import cv2
 import tkinter as tk
 import threading
 from tkinter import ttk, messagebox, PhotoImage, Button, Label
 from pathlib import Path
-from PIL import Image, ImageTk
 import serial.tools.list_ports
 import serial
 import os
@@ -65,8 +63,6 @@ class AppInterface:
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
         self.disconnect_button = Button(self.canvas, image=self.disconnect_button_image, text="Disconnect", command=self.disconnect_arduino, state="disabled")
         self.disconnect_button.place(x=50.0, y=150.0, width=120.0, height=40.0)
-        self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
-        self.switch_button.place(x=50.0, y=200.0, width=120.0, height=20.0)
 
         self.turn_on_motor_widget = Button(self.canvas, text="Turn On", command=self.turn_on_motor)
         self.turn_on_motor_widget.place(x=50, y=250, width=100.0, height=20.0)
@@ -93,6 +89,7 @@ class AppInterface:
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
+
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -192,7 +189,7 @@ class AppInterface:
         self.user_input.config(state="disabled")
 
         self.apply_button_widget = tk.Button(self.canvas, text="Aplicar cambios", font=("Nunito", 14),
-                                             command=self.union, relief="raised", borderwidth=5, bg="white")
+                                             command=self.apply_combox_changes, relief="raised", borderwidth=5, bg="white")
         self.apply_button_widget.place(x=50, y=530)
 
         self.message_label = tk.Label(self.canvas, text="", font=("Calibri", 16), bg="#8FFDCD")
@@ -212,30 +209,56 @@ class AppInterface:
         self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Calibri", 14), bg="#8FFDCD")
         self.titleC_label.place(x=473, y=300)
 
-        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20), command=self.start_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
+        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20),
+                                             command=self.animation_on_write_serial, state="disabled", borderwidth=10,
+                                             width=6, height=1)
         self.start_button_widget.place(x=850, y=450)
 
-        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20), command=self.stop_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
+        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20),
+                                            command=self.animation_off_write_serial, state="disabled", borderwidth=10,
+                                            width=6, height=1)
         self.stop_button_widget.place(x=850, y=550)
 
         self.yes_button_widget = tk.Button(self.canvas, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled",
-                             command=lambda: self.highlight("green"), relief="raised", borderwidth=10, width=6,
+                             command=lambda: self.achieved_test("green"), relief="raised", borderwidth=10, width=6,
                              height=1)
         self.yes_button_widget.place(x=650, y=450)
 
         self.no_button_widget = tk.Button(self.canvas, text="No llegó", font=("Calibri", 20), bg="red", state="disabled",
-                             command=lambda: self.highlight("red"), relief="raised", borderwidth=10, width=6, height=1)
+                             command=lambda: self.failed_test("red"), relief="raised", borderwidth=10, width=6, height=1)
         self.no_button_widget.place(x=650, y=550)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
         self.achieved_levels = [False] * 5
 
-    def union(self):
+    def animation_on_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.start_animation()
+        time.sleep(0.1)
+        self.turn_on_motor()
+        time.sleep(0.1)
         self.send_value()
-        self.apply_combox_changes()
+
+    def animation_off_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.stop_animation()
+        time.sleep(0.1)
+        self.turn_off_motor()
+        time.sleep(0.1)
+        # self.send_value()
+
+    def achieved_test(self, color):
+        self.highlight(color)
+        self.combobox.set("Elija el nivel de fuerza")
+        self.combobox.config(state="readonly")
+        self.turn_off_motor()
+
+    def failed_test(self, color):
+        self.highlight(color)
+        self.combobox.set("Elija el nivel de fuerza")
+        self.combobox.config(state="readonly")
+        self.turn_off_motor()
 
     def apply_combox_changes(self):
         self.level = self.combobox.get()
@@ -269,6 +292,8 @@ class AppInterface:
         if self.level1.startswith("Nivel "):
             level1_num = int(self.level1.split(" ")[1])
             if 1 <= level1_num <= 5:
+                self.active_animation = True
+                self.blink_state = True
                 self.blinking(self.squares[5 - level1_num])
                 self.combobox.config(state="disabled")
                 self.yes_button_widget.config(state="normal")
@@ -284,23 +309,23 @@ class AppInterface:
             square.after(500, lambda: self.blinking(square))
 
     def stop_animation(self):
-        self.level2 = self.combobox.get()
+        self.level = self.combobox.get()
         self.active_animation = False
         self.yes_button_widget.config(state="disabled")
         self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
         self.start_button_widget.config(state="disabled")
         self.stop_button_widget.config(state="disabled")
-        if self.level2.startswith("Nivel "):
-            nivel_num = int(self.level2.split(" ")[1])
+        if self.level.startswith("Nivel "):
+            nivel_num = int(self.level.split(" ")[1])
             if nivel_num > 3:
                 self.user_input.config(state="normal")
 
     def highlight(self, color):
-        self.level3 = self.combobox.get()
+        self.level = self.combobox.get()
 
-        if self.level3.startswith("Nivel "):
-            level_num = int(self.level3.split(" ")[1])
+        if self.level.startswith("Nivel "):
+            level_num = int(self.level.split(" ")[1])
             if 1 <= level_num <= 3:
                 self.stop_animation()
                 self.squares[5 - level_num].config(bg=color)
@@ -314,10 +339,8 @@ class AppInterface:
 
     def send_value(self):
         cadena = str(self.combobox.get())
-
         # Extract the number using split()
         nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
-
         self.arduino_lock.acquire()
         time.sleep(0.02)
         self.ser.write(nivel.encode('ascii'))  # Send only the number
@@ -343,45 +366,11 @@ class AppInterface:
             time.sleep(0.02)
             self.arduino_lock.release()
 
-    def switch_to_interface1(self):
-        self.canvas.place_forget()  # Hide the current interface
-        AppInterphase1(self.root, self)  # Show the second interface
-
-    def show(self):
-        self.canvas.place(x=0, y=0)  # Show the current interface
-
     def on_closing(self):
+        self.turn_off_motor()
         self.disconnect_arduino()
         self.root.destroy()
 
-
-class AppInterphase1:
-    def __init__(self, root, app_interface):
-        self.root = root
-        self.app_interface = app_interface
-        self.canvas = self.create_canvas()
-        self.init_widgets()
-
-    def create_canvas(self):
-        canvas = tk.Canvas(
-            self.root,
-            bg="#FFFFFF",
-            height=720,
-            width=1000,
-            bd=0,
-            highlightthickness=0,
-            relief="ridge"
-        )
-        canvas.place(x=0, y=0)
-        return canvas
-
-    def init_widgets(self):
-        self.back_button = ttk.Button(self.canvas, text="Back to Main Interface", command=self.switch_to_main_interface)
-        self.back_button.place(x=50.0, y=100.0, width=150.0, height=20.0)
-
-    def switch_to_main_interface(self):
-        self.canvas.place_forget()  # Hide the current interface
-        self.app_interface.show()  # Show the main interface
 
 if __name__ == "__main__":
     root = tk.Tk()
