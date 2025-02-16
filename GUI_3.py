@@ -17,7 +17,7 @@ ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
-
+"""
 def find_video_file(directory, video_name):
 
     search_dir = Path(directory)
@@ -28,6 +28,7 @@ def find_video_file(directory, video_name):
             return str(file)  # Return the full path as a string
 
     return None
+"""
 
 class AppInterface:
     def __init__(self, root):
@@ -50,7 +51,7 @@ class AppInterface:
         self.root.configure(bg="white")
         self.canvas = self.create_canvas()
         self.serial_widgets()
-        self.video_setup()
+        # self.video_setup()
         self.name_entry_widget()
         self.grados_widget()
         # self.age_entry_widget()
@@ -85,7 +86,7 @@ class AppInterface:
         self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
         self.switch_button.place(x=20, y=680, width=120, height=20)
 
-    def video_setup(self):
+    """def video_setup(self):
         video_directory = Path(__file__).resolve().parent / "video"
         video_name = "Leg Sequence_5.mp4"
         video_path = self.find_video_file(video_directory, video_name)
@@ -95,6 +96,7 @@ class AppInterface:
             self.leg_animation = LegAnimation(self.canvas, video_path)
         else:
             messagebox.showerror("Error", f"Video file '{video_name}' not found in '{video_directory}'.")
+        
 
     def find_video_file(self, directory, video_name):
         search_dir = Path(directory)
@@ -102,6 +104,7 @@ class AppInterface:
             if file.is_file():
                 return str(file)
         return None
+        """
 
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
@@ -487,7 +490,7 @@ class AppInterphase1:
         self.canvas.place_forget()  # Hide the current interface
         self.app_interface.show()  # Show the main interface
 
-
+"""
 class LegAnimation:
     def __init__(self, canvas, video_path):
         self.canvas = canvas
@@ -526,7 +529,7 @@ class LegAnimation:
         self.label.config(image=frame_image)
         self.label.image = frame_image
         self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
-
+"""
 
 if __name__ == "__main__":
     root = tk.Tk()
