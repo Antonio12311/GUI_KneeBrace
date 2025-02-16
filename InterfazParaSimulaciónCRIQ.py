@@ -22,8 +22,12 @@ rad = 0
 dist = 0.22
 gravity = 9.81
 
+
+
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
+
+
 
 class Meter(tk.Frame):
     def __init__(self, master=None, **kw):
@@ -227,10 +231,10 @@ def on_closing():
 def toggle_boton():
     if boton_toggle["text"] == "Iniciar":
         iniciar_animacion()
-        boton_toggle.config(text="Detener", command=toggle_boton)
+        boton_toggle.config(text="Detener",image=imagen_detener, command=toggle_boton)
     else:
         detener_animacion()
-        boton_toggle.config(text="Iniciar", command=toggle_boton)
+        boton_toggle.config(text="Iniciar", image=imagen_iniciar, command=toggle_boton)
         cuadros[4].config(bg="#FFFFFF")
         cuadros[3].config(bg="#FFFFFF")
         cuadros[2].config(bg="#FFFFFF")
@@ -282,6 +286,7 @@ def save_boton():
     cuadros[2].config(bg="#FFFFFF")
     cuadros[1].config(bg="#FFFFFF")
     cuadros[0].config(bg="#FFFFFF")
+    niveles_superados[:] = [False] * len(niveles_superados)
 
     disconnect_arduino()
 
@@ -299,7 +304,7 @@ def verificar_niveles_anteriores(nivel_actual):
         respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
         if respuesta == "yes":
             for i in range(nivel_actual - 1):
-                cuadros[4 - i].config(bg="green")
+                cuadros[4 - i].config(bg="#06D7A0")
                 niveles_superados[i] = True
             return True
         else:
@@ -329,7 +334,7 @@ def iniciar_animacion():
 def parpadear(cuadro):
     global animacion_activa, blink_state
     if animacion_activa:
-        color = "blue" if blink_state else "white"
+        color = "#A56ABD" if blink_state else "white"
         cuadro.config(bg=color)
         blink_state = not blink_state
         cuadro.after(500, lambda: parpadear(cuadro))
@@ -346,7 +351,7 @@ def detener_animacion():
     combobox.config(state="normal")
     #boton_iniciar.config(state="disabled")
     #boton_detener.config(state="disabled")
-    boton_toggle.config(text="Iniciar", command=iniciar_animacion, state="disabled")
+    boton_toggle.config(text="Iniciar",image=imagen_iniciar, command=iniciar_animacion, state="disabled")
     boton_save.config(state="normal")
     if nivel.startswith("Nivel "):
         nivel_num = int(nivel.split(" ")[1])
@@ -374,14 +379,14 @@ def marcar_llegada(color):
 
 def interface():
     global window, entry_image1, entry_image2, entry_image3, entry_image4, \
-        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label1, mensaje_label2, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save
+        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label1, mensaje_label2, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save, imagen_iniciar, imagen_detener
 
     window = tk.Tk()
     window.geometry("1000x720")
     window.title("Knee Brace GUI")
-    window.configure(background='#FFFFFF')
+    window.configure(background='#D4DBF5')
     canvas = create_canvas(window)
-    canvas.configure(background='#FFFFFF')
+    canvas.configure(background='#D4DBF5')
 
 
 
@@ -426,15 +431,16 @@ def interface():
     grados_label = tk.Label(window, text="Grados", font=("Calibri", 14), bg="#000000", fg="#FFFFFF")
     grados_label.place(x=610, y=280)
 
+    imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
+    imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN.png"))
+
     boton_toggle = tk.Button(
         window,
         text="Iniciar",
         font=("Calibri", 16),
         command=toggle_boton,
         state="normal",
-        borderwidth=8,
-        width=6,
-        height=1)
+        image=imagen_iniciar)
     boton_toggle.place(x=745, y=500)
     boton_toggle.config(state="disabled")
 
@@ -452,10 +458,13 @@ def interface():
     boton_save.place(x=690, y=640)
     boton_save.config(state="disabled")
 
-    boton_si = tk.Button(window, text="Si llegó", font=("Calibri", 16), bg="green", state="disabled", command=lambda: marcar_llegada("green"), relief="raised", borderwidth=8, width=6, height=1)
+    imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
+    imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
+
+    boton_si = tk.Button(window, image=imagen_SI, state="disabled", command=lambda: marcar_llegada("#06D7A0"), relief="flat")
     boton_si.place(x=670, y=570)
 
-    boton_no = tk.Button(window, text="No llegó", font=("Calibri", 16), bg="red", state="disabled", command=lambda: marcar_llegada("red"), relief="raised", borderwidth=8, width=6, height=1)
+    boton_no = tk.Button(window, image=imagen_NO, state="disabled", command=lambda: marcar_llegada("#F04770"), relief="flat")
     boton_no.place(x=820, y=570)
 
     status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#000000")
