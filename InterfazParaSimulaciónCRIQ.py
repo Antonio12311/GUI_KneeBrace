@@ -136,7 +136,7 @@ def name_entry_widget(canvas):
     )
     entry_1 = Entry(
         bd=0,
-        bg="#FFFFFF",
+        bg="#D4DBF5",
         fg="#000000",
         highlightthickness=0,
         state="normal",
@@ -145,7 +145,7 @@ def name_entry_widget(canvas):
     entry_1.place(
         x=200.0,
         y=32.0,
-        width=300.0,
+        width=340.0,
         height=35.0
     )
     canvas.create_text(
@@ -206,7 +206,7 @@ def connect_to_arduino():
     global cambio_conexion
     cambio_conexion = 1
     if cambio_conexion == 1:
-        status_label.config(text="Dispositivo Conectado", fg="#5BFF2F", font=("Calibri", 14))
+        status_label.config(text="Dispositivo Conectado", fg="#549f4d", font=("Calibri", 14))
         connect_button.config(state="disabled")
         disconnect_button.config(state="normal")
         combobox.config(state="normal")
@@ -252,22 +252,22 @@ def aplicar_cambios():
         nivel_num = int(nivel.split(" ")[1])
 
         if nivel_num == 4 and valor.isdigit() and int(valor) > 10:
-            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
-            mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5")
+            mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#D4DBF5")
             return
         elif nivel_num == 5 and valor.isdigit() and int(valor) > 20:
-            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
-            mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5")
+            mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#D4DBF5")
             return
         elif nivel_num in (4, 5) and ((not valor.strip() or not valor.isdigit()) or int(valor) == 0):
-            mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
-            mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
+            mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#D4DBF5")
+            mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#D4DBF5")
             return
         if not verificar_niveles_anteriores(nivel_num):
             return
 
-        mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
-        mensaje_label2.config(text="correctamente", fg="#5BFF2F")
+        mensaje_label1.config(text="Cambios aplicados", fg="#549f4d")
+        mensaje_label2.config(text="correctamente", fg="#549f4d")
         #boton_iniciar.config(state="normal")
         #boton_detener.config(state="normal")
         entrada.config(state="disabled")
@@ -379,7 +379,7 @@ def marcar_llegada(color):
 
 def interface():
     global window, entry_image1, entry_image2, entry_image3, entry_image4, \
-        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label1, mensaje_label2, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save, imagen_iniciar, imagen_detener
+        status_label, connect_button, disconnect_button, leg_animation, combobox, entrada, mensaje_label1, mensaje_label2, cuadros, boton_si, boton_no, boton_toggle, niveles_superados, boton_arduino_sim, boton_aplicar, entry_1, image_widget, image_widget3, boton_save, imagen_iniciar, imagen_detener, imagen_aplicar, imagen_guardar
 
     window = tk.Tk()
     window.geometry("1000x720")
@@ -398,25 +398,27 @@ def interface():
     combobox.config(state="disabled")
 
     vcmd = window.register(validar_entrada)
-    entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="white")
+    entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="#D4DBF5")
     entrada.place(x=350, y=600)
     entrada.config(state="disabled")
 
-    boton_aplicar = tk.Button(window, text="Aplicar cambios", font=("Nunito", 14), command=aplicar_cambios, relief="raised", borderwidth=5, bg="white")
-    boton_aplicar.place(x=300, y=650)
+    imagen_aplicar = PhotoImage(file=relative_to_assets("APPLY_BTN.png"))
+
+    boton_aplicar = tk.Button(window, image=imagen_aplicar, command=aplicar_cambios, relief="flat", bg="#D4DBF5", highlightbackground="#D4DBF5")
+    boton_aplicar.place(x=300, y=640)
     boton_aplicar.config(state="disabled")
 
-    mensaje_label1 = tk.Label(window, text="", font=("Calibri", 12), bg="#000000")
+    mensaje_label1 = tk.Label(window, text="", font=("Calibri", 12), bg="#D4DBF5")
     mensaje_label1.place(x=490, y=650)
-    mensaje_label2 = tk.Label(window, text="", font=("Calibri", 12), bg="#000000")
+    mensaje_label2 = tk.Label(window, text="", font=("Calibri", 12), bg="#D4DBF5")
     mensaje_label2.place(x=490, y=670)
 
-    fuerzaT_label = tk.Label(window, text="F =", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
+    fuerzaT_label = tk.Label(window, text="F =", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
     fuerzaT_label.place(x=300, y=600)
-    fuerzaKg_label = tk.Label(window, text="Kg", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
+    fuerzaKg_label = tk.Label(window, text="Kg", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
     fuerzaKg_label.place(x=500, y=600)
 
-    nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
+    nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
     nivelesF_label.place(x=300, y=520)
 
     cuadros = []
@@ -425,10 +427,10 @@ def interface():
         cuadro.place(x=750, y=410 - (i * 70))
         cuadros.append(cuadro)
 
-    titleC_label = tk.Label(window, text="Niveles", font=("Calibri", 18), bg="#000000", fg="#FFFFFF")
+    titleC_label = tk.Label(window, text="Niveles", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
     titleC_label.place(x=761, y=90)
 
-    grados_label = tk.Label(window, text="Grados", font=("Calibri", 14), bg="#000000", fg="#FFFFFF")
+    grados_label = tk.Label(window, text="Grados", font=("Calibri", 14), bg="#D4DBF5", fg="#000000")
     grados_label.place(x=610, y=280)
 
     imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
@@ -440,34 +442,37 @@ def interface():
         font=("Calibri", 16),
         command=toggle_boton,
         state="normal",
-        image=imagen_iniciar)
+        image=imagen_iniciar,
+        relief="flat",
+        borderwidth=0,
+        highlightbackground="#D4DBF5",
+        bg="#D4DBF5")
     boton_toggle.place(x=745, y=500)
     boton_toggle.config(state="disabled")
 
+    imagen_guardar = PhotoImage(file=relative_to_assets("SAVE_BTN.png"))
     boton_save = tk.Button(
         window,
-        text="Guardar Resultados",
-        font=("Calibri", 16),
+        image=imagen_guardar,
         state="normal",
-        borderwidth=8,
-        width=14,
-        height=1,
-        bg="#FF51C9",
-        fg="#FFFFFF",
+        relief="flat",
+        borderwidth=0,
+        bg="#D4DBF5",
+        highlightbackground="#D4DBF5",
         command=save_boton)
-    boton_save.place(x=690, y=640)
+    boton_save.place(x=707, y=640)
     boton_save.config(state="disabled")
 
     imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
     imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
 
-    boton_si = tk.Button(window, image=imagen_SI, state="disabled", command=lambda: marcar_llegada("#06D7A0"), relief="flat")
+    boton_si = tk.Button(window, image=imagen_SI, state="disabled", command=lambda: marcar_llegada("#06D7A0"), relief="flat", bg="#D4DBF5", highlightbackground="#D4DBF5")
     boton_si.place(x=670, y=570)
 
-    boton_no = tk.Button(window, image=imagen_NO, state="disabled", command=lambda: marcar_llegada("#F04770"), relief="flat")
+    boton_no = tk.Button(window, image=imagen_NO, state="disabled", command=lambda: marcar_llegada("#F04770"), relief="flat", bg="#D4DBF5", highlightbackground="#D4DBF5")
     boton_no.place(x=820, y=570)
 
-    status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#000000")
+    status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#D4DBF5")
     status_label.place(x=50, y=530)
 
     connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
@@ -475,8 +480,12 @@ def interface():
         window,
         image=connect_button_image,
         command=connect_to_arduino,
+        relief="flat",
+        bg="#D4DBF5",
+        highlightcolor="black",
+        highlightbackground="#D4DBF5"
     )
-    connect_button.place(x=100, y=570,)
+    connect_button.place(x=100, y=570)
 
     disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN1.png"))
     disconnect_button = Button(
@@ -484,6 +493,9 @@ def interface():
         image=disconnect_button_image,
         command=disconnect_arduino,
         state="disabled",
+        relief="flat",
+        bg="#D4DBF5",
+        highlightbackground="#D4DBF5"
     )
     disconnect_button.place(x=100, y=630)
 
