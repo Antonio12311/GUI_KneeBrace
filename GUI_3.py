@@ -1,13 +1,12 @@
-import cv2
 import tkinter as tk
 import threading
 from tkinter import ttk, messagebox, PhotoImage, Button, Label
 from pathlib import Path
-from PIL import Image, ImageTk
 import serial.tools.list_ports
 import serial
 import os
 import math
+import time
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -17,20 +16,9 @@ ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
-
-def find_video_file(directory, video_name):
-
-    search_dir = Path(directory)
-
-    # Search for the video file recursively
-    for file in search_dir.rglob(video_name):
-        if file.is_file():  # Ensure it's a file (not a directory)
-            return str(file)  # Return the full path as a string
-
-    return None
-
 class AppInterface:
     def __init__(self, root):
+        self.send_data = None
         self.level = None
         self.value = None
         self.text = None
@@ -50,14 +38,8 @@ class AppInterface:
         self.root.configure(bg="white")
         self.canvas = self.create_canvas()
         self.serial_widgets()
-        self.video_setup()
-        self.name_entry_widget()
-        self.age_entry_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
-
-
-
 
     def create_canvas(self):
         canvas = tk.Canvas(
@@ -81,26 +63,11 @@ class AppInterface:
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
         self.disconnect_button = Button(self.canvas, image=self.disconnect_button_image, text="Disconnect", command=self.disconnect_arduino, state="disabled")
         self.disconnect_button.place(x=50.0, y=150.0, width=120.0, height=40.0)
-        self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
-        self.switch_button.place(x=50.0, y=200.0, width=120.0, height=20.0)
 
-    def video_setup(self):
-        video_directory = Path(__file__).resolve().parent / "video"
-        video_name = "Leg Sequence (4).mp4"
-        video_path = self.find_video_file(video_directory, video_name)
-
-        if video_path:
-            print(f"Video found: {video_path}")
-            self.leg_animation = LegAnimation(self.canvas, video_path)
-        else:
-            messagebox.showerror("Error", f"Video file '{video_name}' not found in '{video_directory}'.")
-
-    def find_video_file(self, directory, video_name):
-        search_dir = Path(directory)
-        for file in search_dir.rglob(video_name):
-            if file.is_file():
-                return str(file)
-        return None
+        self.turn_on_motor_widget = Button(self.canvas, text="Turn On", command=self.turn_on_motor)
+        self.turn_on_motor_widget.place(x=50, y=250, width=100.0, height=20.0)
+        self.turn_off_motor_widget = Button(self.canvas, text="Turn Off", command=self.turn_off_motor)
+        self.turn_off_motor_widget.place(x=50, y=300, width=100.0, height=20.0)
 
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
@@ -122,8 +89,7 @@ class AppInterface:
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
-                                if self.leg_animation:
-                                    self.leg_animation.update_frame(position)
+
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -136,22 +102,40 @@ class AppInterface:
             print("Error reading the serial port:", e)
             self.stop_threads = True
 
+    def send_serial_port(self):
+        try:
+            while not self.stop_threads is True:
+                time.sleep(0.50)
+        except Exception as e:
+            print("Error sending data",e)
+            self.stop_threads = True
+
     def connect_to_arduino(self):
         arduino_port = self.find_arduino_port()
         if arduino_port:
             if self.ser is None:
                 try:
+                    self.arduino_lock = threading.Lock()
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
                     self.stop_threads = False
-                    threading.Thread(target=self.read_serial_port, daemon=True).start()
+
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to connect: {e}")
                     if self.ser:
                         self.ser.close()
                         self.ser = None
+                if self.ser is not None:
+                    # Starting the reading thread
+                    reading_thread = threading.Thread(target=self.read_serial_port, args=self.ser)
+                    reading_thread.start()
+
+                    # Starting the sending thread
+                    sending_thread = threading.Thread(target=self.send_data, args=self.ser)
+                    sending_thread.start()
+
         else:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
@@ -164,70 +148,6 @@ class AppInterface:
             self.connect_button.config(state="normal")
             self.disconnect_button.config(state="disabled")
             self.stop_threads = False
-
-    def name_entry_widget(self):
-        self.ruta_img = relative_to_assets("Entry_Label_Img.png")
-        self.image_widget = PhotoImage(file=self.ruta_img)
-
-        entry_bg_1 = self.canvas.create_image(
-            690.0,
-            60.0,
-            image=self.image_widget
-        )
-        self.entry_1 = Label(
-            bd=0,
-            bg="#acdccc",
-            fg="#000716",
-            highlightthickness=0,
-            state="normal",
-            font="Calibri 13"
-        )
-        self.entry_1.place(
-            x=415.0,
-            y=40.0,
-            width=300.0,
-            height=35.0
-        )
-        self.canvas.create_text(
-            252.0,
-            47,
-            anchor="nw",
-            text="Nombre de pac.",
-            fill="#000000",
-            font="Calibri 13"
-        )
-
-    def age_entry_widget(self):
-        self.ruta_img1 = relative_to_assets("EntryEdad_Label_Img.png")
-        self.image_widget1 = PhotoImage(file=self.ruta_img1)
-
-        entry_bg_2 = self.canvas.create_image(
-            465.0,
-            130.0,
-            image=self.image_widget1
-        )
-        self.entry_2 = Label(
-            bd=0,
-            bg="#acdccc",
-            fg="#000716",
-            highlightthickness=0,
-            state="normal",
-            font="Calibri 13"
-        )
-        self.entry_2.place(
-            x=415.0,
-            y=110.0,
-            width=80.0,
-            height=35.0
-        )
-        self.canvas.create_text(
-            345.0,
-            120,
-            anchor="nw",
-            text="Edad",
-            fill="#000000",
-            font="Calibri 13"
-        )
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -289,26 +209,56 @@ class AppInterface:
         self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Calibri", 14), bg="#8FFDCD")
         self.titleC_label.place(x=473, y=300)
 
-        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20), command=self.start_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
+        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20),
+                                             command=self.animation_on_write_serial, state="disabled", borderwidth=10,
+                                             width=6, height=1)
         self.start_button_widget.place(x=850, y=450)
 
-        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20), command=self.stop_animation,
-                                  state="disabled", borderwidth=10, width=6, height=1)
+        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20),
+                                            command=self.animation_off_write_serial, state="disabled", borderwidth=10,
+                                            width=6, height=1)
         self.stop_button_widget.place(x=850, y=550)
 
         self.yes_button_widget = tk.Button(self.canvas, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled",
-                             command=lambda: self.highlight("green"), relief="raised", borderwidth=10, width=6,
+                             command=lambda: self.achieved_test("green"), relief="raised", borderwidth=10, width=6,
                              height=1)
         self.yes_button_widget.place(x=650, y=450)
 
         self.no_button_widget = tk.Button(self.canvas, text="No llegó", font=("Calibri", 20), bg="red", state="disabled",
-                             command=lambda: self.highlight("red"), relief="raised", borderwidth=10, width=6, height=1)
+                             command=lambda: self.failed_test("red"), relief="raised", borderwidth=10, width=6, height=1)
         self.no_button_widget.place(x=650, y=550)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
         self.achieved_levels = [False] * 5
+
+    def animation_on_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.start_animation()
+        time.sleep(0.1)
+        self.turn_on_motor()
+        time.sleep(0.1)
+        self.send_value()
+
+    def animation_off_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.stop_animation()
+        time.sleep(0.1)
+        self.turn_off_motor()
+        time.sleep(0.1)
+        # self.send_value()
+
+    def achieved_test(self, color):
+        self.highlight(color)
+        self.combobox.set("Elija el nivel de fuerza")
+        self.combobox.config(state="readonly")
+        self.turn_off_motor()
+
+    def failed_test(self, color):
+        self.highlight(color)
+        self.combobox.set("Elija el nivel de fuerza")
+        self.combobox.config(state="readonly")
+        self.turn_off_motor()
 
     def apply_combox_changes(self):
         self.level = self.combobox.get()
@@ -342,6 +292,8 @@ class AppInterface:
         if self.level1.startswith("Nivel "):
             level1_num = int(self.level1.split(" ")[1])
             if 1 <= level1_num <= 5:
+                self.active_animation = True
+                self.blink_state = True
                 self.blinking(self.squares[5 - level1_num])
                 self.combobox.config(state="disabled")
                 self.yes_button_widget.config(state="normal")
@@ -357,23 +309,23 @@ class AppInterface:
             square.after(500, lambda: self.blinking(square))
 
     def stop_animation(self):
-        self.level2 = self.combobox.get()
+        self.level = self.combobox.get()
         self.active_animation = False
         self.yes_button_widget.config(state="disabled")
         self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
         self.start_button_widget.config(state="disabled")
         self.stop_button_widget.config(state="disabled")
-        if self.level2.startswith("Nivel "):
-            nivel_num = int(self.level2.split(" ")[1])
+        if self.level.startswith("Nivel "):
+            nivel_num = int(self.level.split(" ")[1])
             if nivel_num > 3:
                 self.user_input.config(state="normal")
 
-    def highlight(self,color):
-        self.level3 = self.combobox.get()
+    def highlight(self, color):
+        self.level = self.combobox.get()
 
-        if self.level3.startswith("Nivel "):
-            level_num = int(self.level3.split(" ")[1])
+        if self.level.startswith("Nivel "):
+            level_num = int(self.level.split(" ")[1])
             if 1 <= level_num <= 3:
                 self.stop_animation()
                 self.squares[5 - level_num].config(bg=color)
@@ -385,85 +337,39 @@ class AppInterface:
                 self.achieved_levels[level_num - 1] = True
                 self.user_input.config(state="normal")
 
-    def switch_to_interface1(self):
-        self.canvas.place_forget()  # Hide the current interface
-        AppInterphase1(self.root, self)  # Show the second interface
+    def send_value(self):
+        cadena = str(self.combobox.get())
+        # Extract the number using split()
+        nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
+        self.arduino_lock.acquire()
+        time.sleep(0.02)
+        self.ser.write(nivel.encode('ascii'))  # Send only the number
+        time.sleep(0.02)
+        self.arduino_lock.release()
+        print(nivel)  # Print only the number
 
-    def show(self):
-        self.canvas.place(x=0, y=0)  # Show the current interface
+    def turn_on_motor(self):
+        if self.ser is not None:
+            cadena = str(998)
+            self.arduino_lock.acquire()
+            time.sleep(0.02)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.02)
+            self.arduino_lock.release()
+
+    def turn_off_motor(self):
+        if self.ser is not None:
+            cadena = str(999)
+            self.arduino_lock.acquire()
+            time.sleep(0.02)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.02)
+            self.arduino_lock.release()
 
     def on_closing(self):
+        self.turn_off_motor()
         self.disconnect_arduino()
         self.root.destroy()
-
-
-class AppInterphase1:
-    def __init__(self, root, app_interface):
-        self.root = root
-        self.app_interface = app_interface
-        self.canvas = self.create_canvas()
-        self.init_widgets()
-
-    def create_canvas(self):
-        canvas = tk.Canvas(
-            self.root,
-            bg="#FFFFFF",
-            height=720,
-            width=1000,
-            bd=0,
-            highlightthickness=0,
-            relief="ridge"
-        )
-        canvas.place(x=0, y=0)
-        return canvas
-
-    def init_widgets(self):
-        self.back_button = ttk.Button(self.canvas, text="Back to Main Interface", command=self.switch_to_main_interface)
-        self.back_button.place(x=50.0, y=100.0, width=150.0, height=20.0)
-
-    def switch_to_main_interface(self):
-        self.canvas.place_forget()  # Hide the current interface
-        self.app_interface.show()  # Show the main interface
-
-
-class LegAnimation:
-    def __init__(self, canvas, video_path):
-        self.canvas = canvas
-        self.video_path = video_path
-        self.frames = self.load_video_frames(video_path)
-        self.label = tk.Label(self.canvas)
-        self.label.place(x=680, y=150)
-        self.text_id = self.canvas.create_text(645, 250, text="0°", font=("Arial", 16), fill="black")
-        self.update_frame(0)
-
-        self.canvas.create_rectangle(600, 230, 670, 270, outline='black', fill='', width=1)
-
-        self.canvas.create_text(
-            830, 130,  # Coordinates (x, y)
-            text="Ángulo",  # Text content
-            font=("Calibri", 16),  # Font and size
-            fill="black"  # Text color
-        )
-
-    def load_video_frames(self, video_path):
-        cap = cv2.VideoCapture(video_path)
-        frames = []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame)
-        cap.release()
-        return frames
-
-    def update_frame(self, position):
-        frame_index = int(((position) / 150) * (len(self.frames) - 1))
-        frame = self.frames[frame_index]
-        frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
-        self.label.config(image=frame_image)
-        self.label.image = frame_image
-        self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
 
 
 if __name__ == "__main__":
