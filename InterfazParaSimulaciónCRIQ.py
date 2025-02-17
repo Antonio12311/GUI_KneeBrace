@@ -126,7 +126,7 @@ def connect_widgets(canvas):
     return disconnect_button, disconnect_button_image, connect_button, connect_button_image
 
 def name_entry_widget(canvas):
-    ruta_img = relative_to_assets("NeonEntry.png")
+    ruta_img = relative_to_assets("EntryNameLabel.png")
     image_widget = PhotoImage(file=ruta_img)
 
     entry_bg_1 = canvas.create_image(
@@ -140,21 +140,21 @@ def name_entry_widget(canvas):
         fg="#000000",
         highlightthickness=0,
         state="normal",
-        font="Calibri 13"
+        font="Calibri 15"
     )
     entry_1.place(
         x=200.0,
-        y=32.0,
+        y=34.0,
         width=340.0,
-        height=35.0
+        height=31.0
     )
     canvas.create_text(
         40,
         40,
         anchor="nw",
-        text="Nombre de pac.",
+        text="Nombre de pac.:",
         fill="#000000",
-        font="Calibri 13"
+        font="Georgia 14"
     )
     return entry_1, image_widget
 
@@ -192,12 +192,12 @@ def age_entry_widget(canvas):
     return entry_2, image_widget
 
 def grados_widget(canvas):
-    ruta_img = relative_to_assets("ThetaBox.png")
+    ruta_img = relative_to_assets("AngleBox.png")
     image_widget3 = PhotoImage(file=ruta_img)
 
     box_bg_1 = canvas.create_image(
         648.0,
-        329.0,
+        334.0,
         image=image_widget3
     )
     return image_widget3
@@ -206,7 +206,7 @@ def connect_to_arduino():
     global cambio_conexion
     cambio_conexion = 1
     if cambio_conexion == 1:
-        status_label.config(text="Dispositivo Conectado", fg="#549f4d", font=("Calibri", 14))
+        status_label.config(text="Dispositivo Conectado", fg="#549f4d", font=("Georgia", 14))
         connect_button.config(state="disabled")
         disconnect_button.config(state="normal")
         combobox.config(state="normal")
@@ -250,24 +250,23 @@ def aplicar_cambios():
 
     if nivel.startswith("Nivel "):
         nivel_num = int(nivel.split(" ")[1])
-
         if nivel_num == 4 and valor.isdigit() and int(valor) > 10:
-            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5")
-            mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#D4DBF5")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
+            mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
             return
         elif nivel_num == 5 and valor.isdigit() and int(valor) > 20:
-            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5")
-            mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#D4DBF5")
+            mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
+            mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
             return
         elif nivel_num in (4, 5) and ((not valor.strip() or not valor.isdigit()) or int(valor) == 0):
-            mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#D4DBF5")
-            mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#D4DBF5")
+            mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
+            mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#D4DBF5", font=("Georgia"))
             return
         if not verificar_niveles_anteriores(nivel_num):
             return
 
-        mensaje_label1.config(text="Cambios aplicados", fg="#549f4d")
-        mensaje_label2.config(text="correctamente", fg="#549f4d")
+        mensaje_label1.config(text="Cambios aplicados", fg="#549f4d", font=("Georgia"))
+        mensaje_label2.config(text="correctamente", fg="#549f4d", font=("Georgia"))
         #boton_iniciar.config(state="normal")
         #boton_detener.config(state="normal")
         entrada.config(state="disabled")
@@ -304,7 +303,7 @@ def verificar_niveles_anteriores(nivel_actual):
         respuesta = messagebox.askquestion("Confirmación", f"¿Pasó exitosamente los niveles 1 a {nivel_actual - 1}?")
         if respuesta == "yes":
             for i in range(nivel_actual - 1):
-                cuadros[4 - i].config(bg="#06D7A0")
+                cuadros[i - 5].config(bg="#06D7A0")
                 niveles_superados[i] = True
             return True
         else:
@@ -322,14 +321,14 @@ def iniciar_animacion():
             global animacion_activa, blink_state
             animacion_activa = True
             blink_state = True
-            parpadear(cuadros[5 - nivel_num])
+            parpadear(cuadros[nivel_num - 1])
 
             combobox.config(state="disabled")
             boton_si.config(state="normal")
             boton_no.config(state="normal")
             entrada.config(state="disabled")
             boton_save.config(state="disabled")
-            boton_toggle.config(text="Detener", command=detener_animacion)
+            boton_toggle.config(text="Detener", command=detener_animacion, image=imagen_detener)
 
 def parpadear(cuadro):
     global animacion_activa, blink_state
@@ -367,12 +366,12 @@ def marcar_llegada(color):
         nivel_num = int(nivel.split(" ")[1])
         if 1 <= nivel_num <= 3:
             detener_animacion()
-            cuadros[5 - nivel_num].config(bg=color)
+            cuadros[nivel_num - 1].config(bg=color)
             niveles_superados[nivel_num - 1] = True
             entrada.config(state="disabled")
         else:
             detener_animacion()
-            cuadros[5 - nivel_num].config(bg=color)
+            cuadros[nivel_num - 1].config(bg=color)
             niveles_superados[nivel_num - 1] = True
             entrada.config(state="normal")
 
@@ -392,13 +391,13 @@ def interface():
 
 
     niveles = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
-    combobox = ttk.Combobox(window, values=niveles, font=("Calibri", 14), width=20)
+    combobox = ttk.Combobox(window, values=niveles, font=("Georgia", 14), width=20)
     combobox.set("Elija el nivel de fuerza")
     combobox.place(x=300, y=555)
     combobox.config(state="disabled")
 
     vcmd = window.register(validar_entrada)
-    entrada = tk.Entry(window, font=("Calibri", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="#D4DBF5")
+    entrada = tk.Entry(window, font=("Georgia", 16), width=10, validate="key", validatecommand=(vcmd, "%P"), bg="#FFFFFF")
     entrada.place(x=350, y=600)
     entrada.config(state="disabled")
 
@@ -408,30 +407,30 @@ def interface():
     boton_aplicar.place(x=300, y=640)
     boton_aplicar.config(state="disabled")
 
-    mensaje_label1 = tk.Label(window, text="", font=("Calibri", 12), bg="#D4DBF5")
+    mensaje_label1 = tk.Label(window, text="", font=("Georgia", 12), bg="#D4DBF5")
     mensaje_label1.place(x=490, y=650)
-    mensaje_label2 = tk.Label(window, text="", font=("Calibri", 12), bg="#D4DBF5")
+    mensaje_label2 = tk.Label(window, text="", font=("Georgia", 12), bg="#D4DBF5")
     mensaje_label2.place(x=490, y=670)
 
-    fuerzaT_label = tk.Label(window, text="F =", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
+    fuerzaT_label = tk.Label(window, text="F =", font=("Georgia", 18), bg="#D4DBF5", fg="#000000")
     fuerzaT_label.place(x=300, y=600)
-    fuerzaKg_label = tk.Label(window, text="Kg", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
-    fuerzaKg_label.place(x=500, y=600)
+    fuerzaKg_label = tk.Label(window, text="Kg", font=("Georgia", 18), bg="#D4DBF5", fg="#000000")
+    fuerzaKg_label.place(x=480, y=600)
 
-    nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
+    nivelesF_label = tk.Label(window, text="Niveles de fuerza", font=("Georgia", 18), bg="#D4DBF5", fg="#000000")
     nivelesF_label.place(x=300, y=520)
 
     cuadros = []
     for i in range(5):
-        cuadro = tk.Label(window, text=str(5 - i), font=("Arial", 14), width=11, height=3, relief="solid", bg="white")
+        cuadro = tk.Label(window, text=str(i + 1), font=("Georgia", 14), width=11, height=3, relief="solid", bg="white")
         cuadro.place(x=750, y=410 - (i * 70))
         cuadros.append(cuadro)
 
-    titleC_label = tk.Label(window, text="Niveles", font=("Calibri", 18), bg="#D4DBF5", fg="#000000")
-    titleC_label.place(x=761, y=90)
+    titleC_label = tk.Label(window, text="Niveles", font=("Georgia", 18), bg="#D4DBF5", fg="#000000")
+    titleC_label.place(x=768, y=90)
 
-    grados_label = tk.Label(window, text="Grados", font=("Calibri", 14), bg="#D4DBF5", fg="#000000")
-    grados_label.place(x=610, y=280)
+    grados_label = tk.Label(window, text="Grados", font=("Georgia", 14), bg="#D4DBF5", fg="#000000")
+    grados_label.place(x=614, y=280)
 
     imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
     imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN.png"))
@@ -439,7 +438,7 @@ def interface():
     boton_toggle = tk.Button(
         window,
         text="Iniciar",
-        font=("Calibri", 16),
+        font=("Georgia", 16),
         command=toggle_boton,
         state="normal",
         image=imagen_iniciar,
@@ -472,7 +471,7 @@ def interface():
     boton_no = tk.Button(window, image=imagen_NO, state="disabled", command=lambda: marcar_llegada("#F04770"), relief="flat", bg="#D4DBF5", highlightbackground="#D4DBF5")
     boton_no.place(x=820, y=570)
 
-    status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Calibri", 14), bg="#D4DBF5")
+    status_label = tk.Label(canvas, text="Sin conexión", fg="red", font=("Georgia", 14), bg="#D4DBF5")
     status_label.place(x=50, y=530)
 
     connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
@@ -485,7 +484,7 @@ def interface():
         highlightcolor="black",
         highlightbackground="#D4DBF5"
     )
-    connect_button.place(x=100, y=570)
+    connect_button.place(x=70, y=570)
 
     disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN1.png"))
     disconnect_button = Button(
@@ -497,7 +496,7 @@ def interface():
         bg="#D4DBF5",
         highlightbackground="#D4DBF5"
     )
-    disconnect_button.place(x=100, y=630)
+    disconnect_button.place(x=70, y=630)
 
     combobox.bind("<<ComboboxSelected>>", actualizar_estado)
 
