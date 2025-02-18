@@ -17,6 +17,80 @@ ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
+
+class Meter:
+    def __init__(self, canvas):
+        """
+        Initialize the Meter with an existing canvas.
+        """
+        self.canvas = canvas
+
+        # Define the offset for moving the arc and needle
+        self.offset_x = 100  # Move 200 pixels on the x-axis
+        self.offset_y = 100  # Move 200 pixels on the y-axis
+
+        # Define the size increase
+        self.size_increase = 100  # Increase size by 100 pixels
+
+        # Original dimensions of the arc's bounding box
+        self.arc_x1 = 30
+        self.arc_y1 = 30
+        self.arc_x2 = 250
+        self.arc_y2 = 250
+
+        # Increase the size of the arc's bounding box
+        self.arc_x1 += self.size_increase // 2
+        self.arc_y1 += self.size_increase // 2
+        self.arc_x2 += self.size_increase // 2
+        self.arc_y2 += self.size_increase // 2
+
+        # Create the needle (line)
+        # The initial coordinates are adjusted by the offset and size increase
+        self.center_x = 100 + self.offset_x + self.size_increase // 2
+        self.center_y = 100 + self.offset_y + self.size_increase // 2
+        self.needle_length = 80 + self.size_increase // 2  # Increase needle length
+
+        self.meter = self.canvas.create_line(self.center_x, self.center_y,
+                                             self.center_x - self.needle_length, self.center_y,
+                                             fill='black',
+                                             width=3,
+                                             arrow='last')
+
+        # Initialize the needle position
+        self.updateMeterLine(0)
+
+        # Create the arc
+        # The bounding box coordinates are adjusted by the offset and size increase
+        self.canvas.create_arc(self.arc_x1 + self.offset_x, self.arc_y1 + self.offset_y,
+                               self.arc_x2 + self.offset_x, self.arc_y2 + self.offset_y,
+                               extent=140, start=230,
+                               style='arc', outline='red')
+
+    def updateMeterLine(self, position):
+        # Ensure the position is within the arc's range
+        min_angle = 230  # Start angle
+        max_angle = 370  # End angle
+
+        # Clamp the position to the arc's range
+        if position < min_angle:
+            position = min_angle
+        elif position > max_angle:
+            position = max_angle
+
+        # Convert the position to radians
+        angle_rad = position * (pi / 180)
+
+        # Calculate the endpoint of the needle
+        # The center of rotation is now (self.center_x, self.center_y)
+        x = self.center_x + self.needle_length * cos(angle_rad)
+        y = self.center_y - self.needle_length * sin(angle_rad)
+
+        # Update the needle's position
+        self.canvas.coords(self.meter,
+                           self.center_x, self.center_y,  # Start point (center)
+                           x, y)  # End point
+
+
 class AppInterface:
     def __init__(self, root):
         self.updateMeterLine = None
@@ -49,7 +123,8 @@ class AppInterface:
         self.grados_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
-        self.meter_widget()
+
+        self.MeterWidget = Meter(self.canvas)
 
     def name_entry_widget(self):
         self.ruta_img = relative_to_assets("EntryNameLabel.png")
@@ -65,7 +140,7 @@ class AppInterface:
             fg="#000000",
             highlightthickness=0,
             state="normal",
-            font=("Georgia",15)
+            font=("Georgia", 15)
         )
         self.entry_1.place(
             x=200.0,
@@ -79,7 +154,7 @@ class AppInterface:
             anchor="nw",
             text="Nombre de pac.:",
             fill="#000000",
-            font=("Georgia",14)
+            font=("Georgia", 14)
         )
 
     def grados_widget(self):
@@ -90,7 +165,6 @@ class AppInterface:
             334.0,
             image=self.image_widget3
         )
-
 
     def create_canvas(self):
         canvas = tk.Canvas(
@@ -105,12 +179,10 @@ class AppInterface:
         canvas.place(x=0, y=0)
         return canvas
 
-    def meter_widget(self):
-        self.MeterWidget = Meter(self.canvas, self.ser)
-
     def serial_widgets(self):
 
-        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Georgia", 14), bg=self.used_color)
+        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Georgia", 14),
+                                     bg=self.used_color)
         self.status_label.place(x=50.0, y=530.0)
 
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
@@ -156,8 +228,9 @@ class AppInterface:
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
                                 time.sleep(0.04)
-                                if self.MeterWidget and hasattr(self.MeterWidget, "updateMeterLine"):
-                                    self.root.after(0, self.MeterWidget.updateMeterLine, position)
+                                if self.MeterWidget:
+                                    # Pass the position directly (in degrees)
+                                    self.root.after(0, self.MeterWidget.updateMeterLine, 230 + position)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -175,7 +248,7 @@ class AppInterface:
             while not self.stop_threads is True:
                 time.sleep(0.50)
         except Exception as e:
-            print("Error sending data",e)
+            print("Error sending data", e)
             self.stop_threads = True
 
     def connect_to_arduino(self):
@@ -249,7 +322,7 @@ class AppInterface:
     def check_last_lvl(self, actual_lvl):
         if actual_lvl > 1 and not self.achieved_levels[actual_lvl - 1]:
             answer = messagebox.askquestion("Confirmación",
-                                               f"¿Pasó exitosamente los niveles 1 a {actual_lvl - 1}?")
+                                            f"¿Pasó exitosamente los niveles 1 a {actual_lvl - 1}?")
             if answer == "yes":
                 for i in range(actual_lvl - 1):
                     self.squares[i - 5].config(bg="#06D7A0")
@@ -274,13 +347,14 @@ class AppInterface:
 
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Georgia", 16), width=10, validate="key",
-                              validatecommand=(self.cmd_entry, "%P"), bg="white")
+                                   validatecommand=(self.cmd_entry, "%P"), bg="white")
         self.user_input.place(x=350, y=600)
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
-                                             command=self.apply_combox_changes, relief="flat", borderwidth=5, bg=self.used_color)
+                                             command=self.apply_combox_changes, relief="flat", borderwidth=5,
+                                             bg=self.used_color)
         self.apply_button_widget.place(x=300, y=640)
         self.apply_button_widget.config(state="disabled")
 
@@ -294,19 +368,23 @@ class AppInterface:
         self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Georgia", 18), bg=self.used_color, fg="#000000")
         self.strengthKG_label.place(x=480, y=600)
 
-        self.nivelesF_label = tk.Label(self.canvas, text="Niveles de fuerza", font=("Georgia", 18), bg=self.used_color, fg="#000000")
+        self.nivelesF_label = tk.Label(self.canvas, text="Niveles de fuerza", font=("Georgia", 18), bg=self.used_color,
+                                       fg="#000000")
         self.nivelesF_label.place(x=300, y=520)
 
-        self.position_label = tk.Label(self.canvas, text="Posición de la pierna", font=("Georgia", 18), bg=self.used_color, fg="#000000")
+        self.position_label = tk.Label(self.canvas, text="Posición de la pierna", font=("Georgia", 18),
+                                       bg=self.used_color, fg="#000000")
         self.position_label.place(x=170, y=130)
 
         for i in range(5):
-            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 14), width=11, height=3, relief="solid",
-                              bg="white")
-            self.square_widget.place(x=750, y=410 - (i * 70))
+            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 14), width=11, height=3, bd=0,
+                                          highlightbackground=self.used_color, highlightcolor=self.used_color, highlightthickness=3,
+                                          bg="#8FC8EB")
+            self.square_widget.place(x=755, y=410 - (i * 70))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 18), bg=self.used_color, fg="#000000")
+        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 18), bg=self.used_color,
+                                     fg="#000000")
         self.titleC_label.place(x=768, y=90)
 
         self.grados_label = tk.Label(self.canvas, text="Grados", font=("Georgia", 14), bg="#D4DBF5", fg="#000000")
@@ -344,12 +422,14 @@ class AppInterface:
         self.imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
 
         self.yes_button_widget = tk.Button(self.canvas, image=self.imagen_SI, state="disabled",
-                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat", bg=self.used_color)
+                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat",
+                                           bg=self.used_color)
 
         self.yes_button_widget.place(x=670, y=570)
 
         self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
-                                          command=lambda: self.achieved_test("#F04770"), relief="flat", bg=self.used_color)
+                                          command=lambda: self.achieved_test("#F04770"), relief="flat",
+                                          bg=self.used_color)
         self.no_button_widget.place(x=820, y=570)
 
         self.return_image = PhotoImage(file=relative_to_assets("ReturnImgBtn.png"))
@@ -362,8 +442,7 @@ class AppInterface:
             image=self.return_image,
             command=self.soon_message
         )
-        self.return_btn.place(x=860,y=15)
-
+        self.return_btn.place(x=860, y=15)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
@@ -452,7 +531,7 @@ class AppInterface:
                 self.no_button_widget.config(state="normal")
                 self.user_input.config(state="disabled")
                 self.boton_save.config(state="disabled")
-                self.boton_toggle.config(text="Detener", command=self.stop_animation,image=self.imagen_detener)
+                self.boton_toggle.config(text="Detener", command=self.stop_animation, image=self.imagen_detener)
 
     def blinking(self, square):
         if self.active_animation:
@@ -468,7 +547,8 @@ class AppInterface:
         self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
 
-        self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.start_animation, state="disabled")
+        self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.start_animation,
+                                 state="disabled")
         self.boton_save.config(state="normal")
 
         if self.level.startswith("Nivel "):
@@ -525,54 +605,6 @@ class AppInterface:
         self.turn_off_motor()
         self.disconnect_arduino()
         self.root.destroy()
-
-
-class Meter:
-    def __init__(self, canvas, serial_port):
-        self.canvas = canvas
-        self.ser = serial_port  # If needed
-        # Create a label to display the video frame
-        self.label = tk.Label(self.canvas)
-        self.label.place(x=400, y=350)  # Place the label
-        self.label.config(bg="#D4DBF5")
-
-        self.text_id = self.canvas.create_text(
-            648, 330,  # Coordinates (x, y)
-            text="0°",  # Text content
-            font=("Georgia", 18),  # Font and size
-            fill="black"  # Text color
-        )
-
-        # Create the needle (line)
-        self.meter = self.canvas.create_line(1000, 1500, 1000, 1000,
-                                             fill='black',
-                                             width=3,
-                                             arrow='last')
-
-        self.updateMeterLine(0)  # Initialize the needle position
-
-        # Create the arc
-        self.canvas.create_arc(150, 150, 400, 400, extent=140, start=230,
-                               style='arc', outline='red')
-
-    def updateMeterLine(self, a):
-        if a is None:  # Prevent NoneType errors
-            a = 0
-        # Convert the normalized value `a` to an angle in radians
-        start_angle = 245  # Start angle of the arc
-        extent = 115  # Extent of the arc
-        angle_deg = start_angle + a * extent  # Calculate the angle in degrees
-        angle_rad = angle_deg * (pi / 180)  # Convert to radians
-
-        # Calculate the endpoint of the needle
-        x = 200 + 85 * cos(angle_rad)  # 100 is the center of the canvas
-        y = 280 - 85 * sin(angle_rad)
-
-        # Update the needle's position
-        self.canvas.coords(self.meter, 230, 230, x, y)
-
-        # Update the text display
-        self.canvas.itemconfig(self.text_id, text=f"{a:.2f}°")
 
 
 if __name__ == "__main__":
