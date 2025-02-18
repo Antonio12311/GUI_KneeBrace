@@ -41,6 +41,7 @@ class AppInterface:
         self.squares = []
         self.root = root
         self.root.geometry("1000x720")
+        self.root.resizable(False, False)
         self.used_color = '#D4DBF5'
         self.root.configure(bg=self.used_color)
         self.canvas = self.create_canvas()
@@ -210,6 +211,9 @@ class AppInterface:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
     def disconnect_arduino(self):
+        self.turn_off_motor()
+        self.stop_animation()
+        self.boton_save.config(state="disabled")
         if self.ser and self.ser.is_open:
             self.stop_threads = True
             self.ser.close()
@@ -221,20 +225,17 @@ class AppInterface:
             self.apply_button_widget.config(state="disabled")
             self.stop_threads = False
 
+
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
-            self.start_animation()
-            self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
             self.animation_on_write_serial()
+            self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
         else:
-            self.stop_animation()
-            self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
             self.animation_off_write_serial()
-            self.squares[4].config(bg="#FFFFFF")
-            self.squares[3].config(bg="#FFFFFF")
-            self.squares[2].config(bg="#FFFFFF")
-            self.squares[1].config(bg="#FFFFFF")
-            self.squares[0].config(bg="#FFFFFF")
+            self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
+            if self.level.startswith("Nivel "):
+                level_num = int(self.level.split(" ")[1])
+                self.squares[level_num].config(bg="#FFFFFF")
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -349,7 +350,7 @@ class AppInterface:
         self.yes_button_widget.place(x=670, y=570)
 
         self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
-                                          command=lambda: self.achieved_test("#F04770"), relief="flat", bg=self.used_color)
+                                          command=lambda: self.failed_test("#F04770"), relief="flat", bg=self.used_color)
         self.no_button_widget.place(x=820, y=570)
 
         self.return_image = PhotoImage(file=relative_to_assets("ReturnImgBtn.png"))
@@ -370,8 +371,9 @@ class AppInterface:
         self.achieved_levels = [False] * 5
 
     def animation_on_write_serial(self):
-        self.combobox.config(state="readonly")
+        self.combobox.config(state="disabled")
         # self.boton_toggle.config(text="Detener", command=self.stop_animation, image=self.imagen_detener)
+        self.start_animation()
         time.sleep(0.1)
         self.turn_on_motor()
         time.sleep(0.1)
@@ -380,19 +382,19 @@ class AppInterface:
     def animation_off_write_serial(self):
         self.combobox.config(state="readonly")
         # self.boton_toggle.config(text="Iniciar", command=self.start_animation, image=self.imagen_iniciar)
+        self.stop_animation()
         time.sleep(0.1)
         self.turn_off_motor()
         time.sleep(0.1)
+        #self.send_value()
 
     def achieved_test(self, color):
         self.highlight(color)
-        self.combobox.set("Elija el nivel de fuerza")
         self.combobox.config(state="readonly")
         self.turn_off_motor()
 
     def failed_test(self, color):
         self.highlight(color)
-        self.combobox.set("Elija el nivel de fuerza")
         self.combobox.config(state="readonly")
         self.turn_off_motor()
 
@@ -401,21 +403,21 @@ class AppInterface:
         self.value = self.user_input.get()
 
         if self.level.startswith("Nivel "):
-            level_num = int(self.level.split(" ")[1])
+            self.level_num = int(self.level.split(" ")[1])
 
-            if level_num == 4 and self.value.isdigit() and int(self.value) > 10:
+            if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
                 self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
                 self.mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#000000")
                 return
-            elif level_num == 5 and self.value.isdigit() and int(self.value) > 20:
+            elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
                 self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
                 self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
                 return
-            elif level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit()) or int(self.value) == 0):
+            elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit()) or int(self.value) == 0):
                 self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
                 self.mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
                 return
-            if not self.check_last_lvl(level_num):
+            if not self.check_last_lvl(self.level_num):
                 return
 
             self.mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
@@ -428,7 +430,7 @@ class AppInterface:
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def save_boton(self):
-        self.messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+        messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
         self.boton_save.config(state="disabled")
         self.user_input.config(state="disabled")
         self.squares[4].config(bg="#FFFFFF")
@@ -441,18 +443,18 @@ class AppInterface:
     def start_animation(self):
         self.level1 = self.combobox.get()
         if self.level1.startswith("Nivel "):
-            level1_num = int(self.level1.split(" ")[1])
-            if 1 <= level1_num <= 5:
+            self.level1_num = int(self.level1.split(" ")[1])
+            if 1 <= self.level1_num <= 5:
                 self.active_animation = True
                 self.blink_state = True
-                self.blinking(self.squares[5 - level1_num])
+                self.blinking(self.squares[self.level1_num - 1])
 
                 self.combobox.config(state="disabled")
                 self.yes_button_widget.config(state="normal")
                 self.no_button_widget.config(state="normal")
                 self.user_input.config(state="disabled")
                 self.boton_save.config(state="disabled")
-                self.boton_toggle.config(text="Detener", command=self.stop_animation,image=self.imagen_detener)
+                self.boton_toggle.config(text="Detener", image=self.imagen_detener)
 
     def blinking(self, square):
         if self.active_animation:
@@ -467,29 +469,28 @@ class AppInterface:
         self.yes_button_widget.config(state="disabled")
         self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
-
-        self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.start_animation, state="disabled")
+        self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, state="disabled")
         self.boton_save.config(state="normal")
 
         if self.level.startswith("Nivel "):
-            nivel_num = int(self.level.split(" ")[1])
-            if nivel_num > 3:
+            self.nivel_num = int(self.level.split(" ")[1])
+            if self.nivel_num > 3:
                 self.user_input.config(state="normal")
 
     def highlight(self, color):
         self.level = self.combobox.get()
 
         if self.level.startswith("Nivel "):
-            level_num = int(self.level.split(" ")[1])
-            if 1 <= level_num <= 3:
+            self.level_num = int(self.level.split(" ")[1])
+            if 1 <= self.level_num <= 3:
                 self.stop_animation()
-                self.squares[5 - level_num].config(bg=color)
-                self.achieved_levels[level_num - 1] = True
+                self.squares[self.level_num - 1].config(bg=color)
+                self.achieved_levels[self.level_num - 1] = True
                 self.user_input.config(state="disabled")
             else:
                 self.stop_animation()
-                self.squares[5 - level_num].config(bg=color)
-                self.achieved_levels[level_num - 1] = True
+                self.squares[self.level_num - 1].config(bg=color)
+                self.achieved_levels[self.level_num - 1] = True
                 self.user_input.config(state="normal")
 
     def send_value(self):
@@ -502,6 +503,7 @@ class AppInterface:
         time.sleep(0.02)
         self.arduino_lock.release()
         print(nivel)  # Print only the number
+        print(self.combobox.get())
 
     def turn_on_motor(self):
         if self.ser is not None:
