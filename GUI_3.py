@@ -6,6 +6,7 @@ import serial.tools.list_ports
 import serial
 import os
 import math
+from math import pi, cos, sin
 import time
 
 _DIR = os.path.dirname(__file__)
@@ -45,6 +46,8 @@ class AppInterface:
         self.serial_widgets()
         self.create_combo_widget()
         self.apply_combox_changes()
+        self.meter_widget()
+
 
     def create_canvas(self):
         canvas = tk.Canvas(
@@ -58,6 +61,9 @@ class AppInterface:
         )
         canvas.place(x=0, y=0)
         return canvas
+
+    def meter_widget(self):
+        self.MeterWidget = Meter(self.canvas, self.ser)
 
     def serial_widgets(self):
 
@@ -102,6 +108,9 @@ class AppInterface:
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
+                                time.sleep(0.04)
+                                if self.MeterWidget and hasattr(self.MeterWidget, "updateMeterLine"):
+                                    self.root.after(0, self.MeterWidget.updateMeterLine, position)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -446,6 +455,53 @@ class AppInterface:
         self.turn_off_motor()
         self.disconnect_arduino()
         self.root.destroy()
+
+
+class Meter:
+    def __init__(self, canvas, serial_port):
+        self.canvas = canvas
+        self.ser = serial_port  # If needed
+        # Create a label to display the video frame
+        self.label = tk.Label(self.canvas)
+        self.label.place(x=200, y=150)  # Place the label
+
+        self.text_id = self.canvas.create_text(
+            200, 200,  # Coordinates (x, y)
+            text="0°",  # Text content
+            font=("Arial", 16),  # Font and size
+            fill="black"  # Text color
+        )
+
+        # Create the needle (line)
+        self.meter = self.canvas.create_line(1000, 1500, 1000, 1000,
+                                             fill='black',
+                                             width=3,
+                                             arrow='last')
+
+        self.updateMeterLine(0)  # Initialize the needle position
+
+        # Create the arc
+        self.canvas.create_arc(30, 30, 200, 200, extent=140, start=230,
+                               style='arc', outline='red')
+
+    def updateMeterLine(self, a):
+        if a is None:  # Prevent NoneType errors
+            a = 0
+        # Convert the normalized value `a` to an angle in radians
+        start_angle = 245  # Start angle of the arc
+        extent = 115  # Extent of the arc
+        angle_deg = start_angle + a * extent  # Calculate the angle in degrees
+        angle_rad = angle_deg * (pi / 180)  # Convert to radians
+
+        # Calculate the endpoint of the needle
+        x = 100 + 85 * cos(angle_rad)  # 100 is the center of the canvas
+        y = 100 - 85 * sin(angle_rad)
+
+        # Update the needle's position
+        self.canvas.coords(self.meter, 100, 100, x, y)
+
+        # Update the text display
+        self.canvas.itemconfig(self.text_id, text=f"{a:.2f}°")
 
 
 if __name__ == "__main__":
