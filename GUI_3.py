@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox, PhotoImage, Button, Label
+from tkinter import ttk, messagebox, PhotoImage, Button
 from pathlib import Path
 import serial.tools.list_ports
 import serial
@@ -18,6 +18,11 @@ def relative_to_assets(path: str) -> Path:
 
 class AppInterface:
     def __init__(self, root):
+        self.updateMeterLine = None
+        self.MeterWidget = None
+        self.messagebox = None
+        self.stop_button_widget = None
+        self.start_button_widget = None
         self.send_data = None
         self.level = None
         self.value = None
@@ -55,19 +60,27 @@ class AppInterface:
         return canvas
 
     def serial_widgets(self):
+
         self.status_label = tk.Label(self.canvas, text="Not Connected", fg="red", font=("Arial", 14))
         self.status_label.place(x=50.0, y=530.0)
-        self.connect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_CONECTAR.png"))
-        self.connect_button = Button(self.canvas, image=self.connect_button_image, text="Connect", command=self.connect_to_arduino)
-        self.connect_button.place(x=100.0, y=570.0, width=120.0, height=40.0)
-        self.disconnect_button_image = PhotoImage(file=relative_to_assets("BOTON_IMG_DESCONECTAR.png"))
-        self.disconnect_button = Button(self.canvas, image=self.disconnect_button_image, text="Disconnect", command=self.disconnect_arduino, state="disabled")
-        self.disconnect_button.place(x=100.0, y=630.0, width=120.0, height=40.0)
 
-        self.turn_on_motor_widget = Button(self.canvas, text="Turn On", command=self.turn_on_motor)
-        self.turn_on_motor_widget.place(x=50, y=250, width=100.0, height=20.0)
-        self.turn_off_motor_widget = Button(self.canvas, text="Turn Off", command=self.turn_off_motor)
-        self.turn_off_motor_widget.place(x=50, y=300, width=100.0, height=20.0)
+        self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
+        self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
+        self.connect_button = Button(
+            self.canvas,
+            image=self.connect_button_image,
+            command=self.connect_to_arduino,
+        )
+        self.connect_button.place(x=100, y=570)
+
+        self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN1.png"))
+        self.disconnect_button = Button(
+            self.canvas,
+            image=self.disconnect_button_image,
+            command=self.disconnect_arduino,
+            state="disabled",
+        )
+        self.disconnect_button.place(x=100, y=630)
 
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
@@ -89,7 +102,6 @@ class AppInterface:
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
-
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -120,6 +132,8 @@ class AppInterface:
                     self.status_label.config(text=f"Connected to {arduino_port}", fg="green")
                     self.connect_button.config(state="disabled")
                     self.disconnect_button.config(state="normal")
+                    self.combobox.config(state="normal")
+                    self.apply_button_widget.config(state="normal")
                     self.stop_threads = False
 
                 except Exception as e:
@@ -147,7 +161,24 @@ class AppInterface:
             self.status_label.config(text="Disconnected", fg="red")
             self.connect_button.config(state="normal")
             self.disconnect_button.config(state="disabled")
+            self.combobox.config(state="disabled")
+            self.apply_button_widget.config(state="disabled")
             self.stop_threads = False
+
+    def toggle_boton(self):
+        if self.boton_toggle["text"] == "Iniciar":
+            self.start_animation()
+            self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
+            self.animation_on_write_serial()
+        else:
+            self.stop_animation()
+            self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
+            self.animation_off_write_serial()
+            self.squares[4].config(bg="#FFFFFF")
+            self.squares[3].config(bg="#FFFFFF")
+            self.squares[2].config(bg="#FFFFFF")
+            self.squares[1].config(bg="#FFFFFF")
+            self.squares[0].config(bg="#FFFFFF")
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -191,6 +222,7 @@ class AppInterface:
         self.apply_button_widget = tk.Button(self.canvas, text="Aplicar cambios", font=("Nunito", 14),
                                              command=self.apply_combox_changes, relief="raised", borderwidth=5, bg="white")
         self.apply_button_widget.place(x=300, y=650)
+        self.apply_button_widget.config(state="disabled")
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Calibri", 12), bg="#000000")
         self.mensaje_label1.place(x=490, y=650)
@@ -214,15 +246,8 @@ class AppInterface:
         self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Calibri", 14), bg="#8FFDCD")
         self.titleC_label.place(x=761, y=90)
 
-        self.start_button_widget = tk.Button(self.canvas, text="Iniciar", font=("Calibri", 20),
-                                             command=self.animation_on_write_serial, state="disabled", borderwidth=10,
-                                             width=6, height=1)
-        self.start_button_widget.place(x=745, y=500)
-
-        self.stop_button_widget = tk.Button(self.canvas, text="Detener", font=("Calibri", 20),
-                                            command=self.animation_off_write_serial, state="disabled", borderwidth=10,
-                                            width=6, height=1)
-        self.stop_button_widget.place(x=850, y=550)
+        self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
+        self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN.png"))
 
         self.boton_save = tk.Button(
             self.canvas,
@@ -238,14 +263,28 @@ class AppInterface:
         self.boton_save.place(x=690, y=640)
         self.boton_save.config(state="disabled")
 
-        self.yes_button_widget = tk.Button(self.canvas, text="Si llegó", font=("Calibri", 20), bg="green", state="disabled",
-                             command=lambda: self.achieved_test("green"), relief="raised", borderwidth=10, width=6,
-                             height=1)
+        self.boton_toggle = tk.Button(
+            self.canvas,
+            text="Iniciar",
+            font=("Calibri", 16),
+            command=self.toggle_boton,
+            state="normal",
+            image=self.imagen_iniciar)
+        self.boton_toggle.place(x=745, y=500)
+        self.boton_toggle.config(state="disabled")
+
+        self.imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
+        self.imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
+
+        self.yes_button_widget = tk.Button(self.canvas, image=self.imagen_SI, state="disabled",
+                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat")
+
         self.yes_button_widget.place(x=670, y=570)
 
-        self.no_button_widget = tk.Button(self.canvas, text="No llegó", font=("Calibri", 20), bg="red", state="disabled",
-                             command=lambda: self.failed_test("red"), relief="raised", borderwidth=10, width=6, height=1)
+        self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
+                                          command=lambda: self.achieved_test("#F04770"), relief="flat")
         self.no_button_widget.place(x=820, y=570)
+
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
@@ -253,7 +292,7 @@ class AppInterface:
 
     def animation_on_write_serial(self):
         self.combobox.config(state="readonly")
-        self.start_animation()
+        # self.boton_toggle.config(text="Detener", command=self.stop_animation, image=self.imagen_detener)
         time.sleep(0.1)
         self.turn_on_motor()
         time.sleep(0.1)
@@ -261,11 +300,10 @@ class AppInterface:
 
     def animation_off_write_serial(self):
         self.combobox.config(state="readonly")
-        self.stop_animation()
+        # self.boton_toggle.config(text="Iniciar", command=self.start_animation, image=self.imagen_iniciar)
         time.sleep(0.1)
         self.turn_off_motor()
         time.sleep(0.1)
-        # self.send_value()
 
     def achieved_test(self, color):
         self.highlight(color)
@@ -287,24 +325,28 @@ class AppInterface:
             level_num = int(self.level.split(" ")[1])
 
             if level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.message_label.config(text="Límite de valor es 10 en Nivel 4", fg="red")
+                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
+                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#000000")
                 return
             elif level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.message_label.config(text="Límite de valor es 20 en Nivel 5", fg="red")
+                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
+                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
                 return
             elif level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit()) or int(self.value) == 0):
-                self.message_label.config(text="ERROR. Ingrese un valor de fuerza", fg="red")
+                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
+                self.mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
                 return
             if not self.check_last_lvl(level_num):
                 return
 
-            self.message_label.config(text="Cambios aplicados correctamente", fg="green")
-            self.start_button_widget.config(state="normal")
-            self.stop_button_widget.config(state="normal")
+            self.mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
+            self.mensaje_label2.config(text="correctamente", fg="#5BFF2F")
             self.user_input.config(state="disabled")
             self.combobox.config(state="disabled")
+            self.boton_toggle.config(state="normal")
 
-        self.message_label.after(5000, lambda: self.message_label.config(text=""))
+        self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
+        self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def save_boton(self):
         self.messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
@@ -317,7 +359,6 @@ class AppInterface:
         self.squares[0].config(bg="#FFFFFF")
         self.achieved_levels[:] = [False] * len(self.achieved_levels)
 
-
     def start_animation(self):
         self.level1 = self.combobox.get()
         if self.level1.startswith("Nivel "):
@@ -326,11 +367,13 @@ class AppInterface:
                 self.active_animation = True
                 self.blink_state = True
                 self.blinking(self.squares[5 - level1_num])
+
                 self.combobox.config(state="disabled")
                 self.yes_button_widget.config(state="normal")
                 self.no_button_widget.config(state="normal")
                 self.user_input.config(state="disabled")
-                self.start_button_widget.config(state="disabled")
+                self.boton_save.config(state="disabled")
+                self.boton_toggle.config(text="Detener", command=self.stop_animation,image=self.imagen_detener)
 
     def blinking(self, square):
         if self.active_animation:
@@ -345,8 +388,10 @@ class AppInterface:
         self.yes_button_widget.config(state="disabled")
         self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
-        self.start_button_widget.config(state="disabled")
-        self.stop_button_widget.config(state="disabled")
+
+        self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.start_animation, state="disabled")
+        self.boton_save.config(state="normal")
+
         if self.level.startswith("Nivel "):
             nivel_num = int(self.level.split(" ")[1])
             if nivel_num > 3:
