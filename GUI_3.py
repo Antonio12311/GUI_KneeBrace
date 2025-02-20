@@ -6,7 +6,6 @@ import serial.tools.list_ports
 import serial
 import os
 import math
-from math import pi, cos, sin
 import time
 
 _DIR = os.path.dirname(__file__)
@@ -18,8 +17,48 @@ def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
 
-class AppInterface:
+class AppInterface1:
     def __init__(self, root):
+        self.root = root
+        self.used_color = '#D4DBF5'
+        self.canvas = self.create_canvas()
+        self.init_widgets()
+        self.root.geometry("1000x720")
+        self.root.resizable(False, False)
+        self.root.configure(bg=self.used_color)
+        self.canvas = self.create_canvas()
+        self.init_widgets()
+
+    def create_canvas(self):
+        canvas = tk.Canvas(
+            self.root,
+            bg=self.used_color,
+            height=720,
+            width=1000,
+            bd=0,
+            highlightthickness=0,
+            relief="ridge"
+        )
+        canvas.place(x=0, y=0)
+        return canvas
+
+    def init_widgets(self):
+        self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
+        self.switch_button.place(x=50.0, y=100.0, width=120.0, height=20.0)
+
+    def switch_to_interface1(self):
+        self.canvas.place_forget()  # Hide the current interface
+        AppInterface2(self.root, self)  # Show the second interface
+
+    def show(self):
+        self.canvas.place(x=0, y=0)  # Show the current interface
+
+    def on_closing(self):
+        self.root.destroy()
+
+
+class AppInterface2:
+    def __init__(self, root, init_interface):
         self.updateMeterLine = None
         self.MeterWidget = None
         self.messagebox = None
@@ -41,6 +80,7 @@ class AppInterface:
         self.blink_state = True
         self.squares = []
         self.root = root
+        self.app_interface = init_interface
         self.root.geometry("1000x720")
         self.root.resizable(False, False)
         self.used_color = '#D4DBF5'
@@ -92,7 +132,6 @@ class AppInterface:
             360.0,
             image=self.image_widget3
         )
-
 
     def create_canvas(self):
         canvas = tk.Canvas(
@@ -523,6 +562,14 @@ class AppInterface:
             time.sleep(0.02)
             self.arduino_lock.release()
 
+    def init_widgets(self):
+        self.back_button = ttk.Button(self.canvas, text="Back to Main Interface", command=self.switch_to_main_interface)
+        self.back_button.place(x=50.0, y=100.0, width=150.0, height=20.0)
+
+    def switch_to_main_interface(self):
+        self.canvas.place_forget()  # Hide the current interface
+        self.app_interface.show()  # Show the main interface
+
     def on_closing(self):
         self.turn_off_motor()
         time.sleep(0.02)
@@ -532,6 +579,6 @@ class AppInterface:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = AppInterface(root)
+    app = AppInterface1(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
