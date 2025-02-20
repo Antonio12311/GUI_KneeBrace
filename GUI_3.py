@@ -406,22 +406,22 @@ class AppInterface:
             self.level_num = int(self.level.split(" ")[1])
 
             if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
-                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg=self.used_color)
+                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#F43838", bg=self.used_color)
                 return
             elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
-                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg=self.used_color)
+                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg=self.used_color)
                 return
             elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit()) or int(self.value) == 0):
-                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
-                self.mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
+                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg=self.used_color)
+                self.mensaje_label2.config(text="de fuerza", fg="#F43838", bg=self.used_color)
                 return
             if not self.check_last_lvl(self.level_num):
                 return
 
-            self.mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
-            self.mensaje_label2.config(text="correctamente", fg="#5BFF2F")
+            self.mensaje_label1.config(text="Cambios aplicados", fg="#239943", bg=self.used_color)
+            self.mensaje_label2.config(text="correctamente", fg="#239943", bg=self.used_color)
             self.user_input.config(state="disabled")
             self.combobox.config(state="disabled")
             self.boton_toggle.config(state="normal")
