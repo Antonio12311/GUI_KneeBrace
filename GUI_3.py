@@ -17,6 +17,7 @@ ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
+
 class AppInterface:
     def __init__(self, root):
         self.updateMeterLine = None
@@ -50,7 +51,7 @@ class AppInterface:
         self.grados_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
-        self.meter_widget()
+
 
     def name_entry_widget(self):
         self.ruta_img = relative_to_assets("EntryNameLabel.png")
@@ -88,7 +89,7 @@ class AppInterface:
         self.image_widget3 = PhotoImage(file=self.ruta_img)
         self.box_bg_1 = self.canvas.create_image(
             648.0,
-            334.0,
+            360.0,
             image=self.image_widget3
         )
 
@@ -105,9 +106,6 @@ class AppInterface:
         )
         canvas.place(x=0, y=0)
         return canvas
-
-    def meter_widget(self):
-        self.MeterWidget = Meter(self.canvas, self.ser)
 
     def serial_widgets(self):
 
@@ -157,8 +155,6 @@ class AppInterface:
                                 torque = abs(float(values[1]))
                                 print(f"Position: {position}, Torque: {torque}")
                                 time.sleep(0.04)
-                                if self.MeterWidget and hasattr(self.MeterWidget, "updateMeterLine"):
-                                    self.root.after(0, self.MeterWidget.updateMeterLine, position)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -302,16 +298,20 @@ class AppInterface:
         self.position_label.place(x=170, y=130)
 
         for i in range(5):
-            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 14), width=11, height=3, relief="solid",
-                              bg="white")
-            self.square_widget.place(x=750, y=410 - (i * 70))
+            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 14), width=11, height=3, bd=0,
+                                          highlightbackground=self.used_color, highlightcolor=self.used_color, highlightthickness=3,
+                                          bg="white")
+            self.square_widget.place(x=755, y=410 - (i * 70))
             self.squares.append(self.square_widget)
 
         self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 18), bg=self.used_color, fg="#000000")
         self.titleC_label.place(x=768, y=90)
 
         self.grados_label = tk.Label(self.canvas, text="Grados", font=("Georgia", 14), bg="#D4DBF5", fg="#000000")
-        self.grados_label.place(x=614, y=280)
+        self.grados_label.place(x=614, y=300)
+
+        self.torque_label = tk.Label(self.canvas, text="Torque", font=("Georgia", 14), bg="#D4DBF5", fg="#000000")
+        self.torque_label.place(x=614, y=170)
 
         self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
         self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN.png"))
@@ -525,56 +525,9 @@ class AppInterface:
 
     def on_closing(self):
         self.turn_off_motor()
+        time.sleep(0.02)
         self.disconnect_arduino()
         self.root.destroy()
-
-
-class Meter:
-    def __init__(self, canvas, serial_port):
-        self.canvas = canvas
-        self.ser = serial_port  # If needed
-        # Create a label to display the video frame
-        self.label = tk.Label(self.canvas)
-        self.label.place(x=400, y=350)  # Place the label
-        self.label.config(bg="#D4DBF5")
-
-        self.text_id = self.canvas.create_text(
-            648, 330,  # Coordinates (x, y)
-            text="0°",  # Text content
-            font=("Georgia", 18),  # Font and size
-            fill="black"  # Text color
-        )
-
-        # Create the needle (line)
-        self.meter = self.canvas.create_line(1000, 1500, 1000, 1000,
-                                             fill='black',
-                                             width=3,
-                                             arrow='last')
-
-        self.updateMeterLine(0)  # Initialize the needle position
-
-        # Create the arc
-        self.canvas.create_arc(150, 150, 400, 400, extent=140, start=230,
-                               style='arc', outline='red')
-
-    def updateMeterLine(self, a):
-        if a is None:  # Prevent NoneType errors
-            a = 0
-        # Convert the normalized value `a` to an angle in radians
-        start_angle = 245  # Start angle of the arc
-        extent = 115  # Extent of the arc
-        angle_deg = start_angle + a * extent  # Calculate the angle in degrees
-        angle_rad = angle_deg * (pi / 180)  # Convert to radians
-
-        # Calculate the endpoint of the needle
-        x = 200 + 85 * cos(angle_rad)  # 100 is the center of the canvas
-        y = 280 - 85 * sin(angle_rad)
-
-        # Update the needle's position
-        self.canvas.coords(self.meter, 230, 230, x, y)
-
-        # Update the text display
-        self.canvas.itemconfig(self.text_id, text=f"{a:.2f}°")
 
 
 if __name__ == "__main__":
