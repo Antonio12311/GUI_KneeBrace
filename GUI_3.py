@@ -2,6 +2,7 @@ import tkinter as tk
 import threading
 from tkinter import ttk, messagebox, PhotoImage, Button, Entry
 from pathlib import Path
+from PIL import Image, ImageTk
 import serial.tools.list_ports
 import serial
 import os
@@ -80,6 +81,7 @@ class AppInterface2:
         self.blink_state = True
         self.squares = []
         self.root = root
+        self.frames_path = Path(__file__).resolve().parent / "light_video"
         self.app_interface = init_interface
         self.root.geometry("1000x720")
         self.root.resizable(False, False)
@@ -91,7 +93,8 @@ class AppInterface2:
         self.grados_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
-
+        self.leg_animation = LegAnimation(self.canvas, self.frames_path)
+        self.init_widgets()
 
     def name_entry_widget(self):
         self.ruta_img = relative_to_assets("EntryNameLabel.png")
@@ -107,7 +110,7 @@ class AppInterface2:
             fg="#000000",
             highlightthickness=0,
             state="normal",
-            font=("Georgia",15)
+            font=("Georgia", 15)
         )
         self.entry_1.place(
             x=200.0,
@@ -121,7 +124,7 @@ class AppInterface2:
             anchor="nw",
             text="Nombre de pac.:",
             fill="#000000",
-            font=("Georgia",14)
+            font=("Georgia", 14)
         )
 
     def grados_widget(self):
@@ -148,7 +151,8 @@ class AppInterface2:
 
     def serial_widgets(self):
 
-        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Georgia", 14), bg=self.used_color)
+        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Georgia", 14),
+                                     bg=self.used_color)
         self.status_label.place(x=50.0, y=530.0)
 
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
@@ -192,8 +196,9 @@ class AppInterface2:
                                 rad = abs(float(values[0]))
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
-                                print(f"Position: {position}, Torque: {torque}")
-                                time.sleep(0.04)
+                                time.sleep(0.05)
+                                if self.leg_animation:
+                                    self.leg_animation.update_frame(position)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -209,9 +214,9 @@ class AppInterface2:
     def send_serial_port(self):
         try:
             while not self.stop_threads is True:
-                time.sleep(0.50)
+                time.sleep(0.05)
         except Exception as e:
-            print("Error sending data",e)
+            print("Error sending data", e)
             self.stop_threads = True
 
     def connect_to_arduino(self):
@@ -260,7 +265,6 @@ class AppInterface2:
             self.apply_button_widget.config(state="disabled")
             self.stop_threads = False
 
-
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
             self.animation_on_write_serial()
@@ -285,7 +289,7 @@ class AppInterface2:
     def check_last_lvl(self, actual_lvl):
         if actual_lvl > 1 and not self.achieved_levels[actual_lvl - 1]:
             answer = messagebox.askquestion("Confirmación",
-                                               f"¿Pasó exitosamente los niveles 1 a {actual_lvl - 1}?")
+                                            f"¿Pasó exitosamente los niveles 1 a {actual_lvl - 1}?")
             if answer == "yes":
                 for i in range(actual_lvl - 1):
                     self.squares[i - 5].config(bg="#06D7A0")
@@ -310,13 +314,14 @@ class AppInterface2:
 
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Georgia", 16), width=10, validate="key",
-                              validatecommand=(self.cmd_entry, "%P"), bg="white")
+                                   validatecommand=(self.cmd_entry, "%P"), bg="white")
         self.user_input.place(x=350, y=600)
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
-                                             command=self.apply_combox_changes, relief="flat", borderwidth=5, bg=self.used_color)
+                                             command=self.apply_combox_changes, relief="flat", borderwidth=5,
+                                             bg=self.used_color)
         self.apply_button_widget.place(x=300, y=640)
         self.apply_button_widget.config(state="disabled")
 
@@ -330,20 +335,23 @@ class AppInterface2:
         self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Georgia", 18), bg=self.used_color, fg="#000000")
         self.strengthKG_label.place(x=480, y=600)
 
-        self.nivelesF_label = tk.Label(self.canvas, text="Niveles de fuerza", font=("Georgia", 18), bg=self.used_color, fg="#000000")
+        self.nivelesF_label = tk.Label(self.canvas, text="Niveles de fuerza", font=("Georgia", 18),
+                                       bg=self.used_color, fg="#000000")
         self.nivelesF_label.place(x=300, y=520)
 
-        self.position_label = tk.Label(self.canvas, text="Posición de la pierna", font=("Georgia", 18), bg=self.used_color, fg="#000000")
-        self.position_label.place(x=170, y=130)
+        self.position_label = tk.Label(self.canvas, text="Posición de la pierna", font=("Georgia", 18),
+                                       bg=self.used_color, fg="#000000")
+        self.position_label.place(x=210, y=130)
 
         for i in range(5):
             self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 14), width=11, height=3, bd=0,
-                                          highlightbackground=self.used_color, highlightcolor=self.used_color, highlightthickness=3,
-                                          bg="white")
+                                          highlightbackground=self.used_color, highlightcolor=self.used_color,
+                                          highlightthickness=3, bg="white")
             self.square_widget.place(x=755, y=410 - (i * 70))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 18), bg=self.used_color, fg="#000000")
+        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 18), bg=self.used_color,
+                                     fg="#000000")
         self.titleC_label.place(x=768, y=90)
 
         self.grados_label = tk.Label(self.canvas, text="Grados", font=("Georgia", 14), bg="#D4DBF5", fg="#000000")
@@ -384,12 +392,14 @@ class AppInterface2:
         self.imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
 
         self.yes_button_widget = tk.Button(self.canvas, image=self.imagen_SI, state="disabled",
-                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat", bg=self.used_color)
+                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat",
+                                           bg=self.used_color)
 
         self.yes_button_widget.place(x=670, y=570)
 
         self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
-                                          command=lambda: self.failed_test("#F04770"), relief="flat", bg=self.used_color)
+                                          command=lambda: self.failed_test("#F04770"), relief="flat",
+                                          bg=self.used_color)
         self.no_button_widget.place(x=820, y=570)
 
         self.return_image = PhotoImage(file=relative_to_assets("ReturnImgBtn.png"))
@@ -402,8 +412,7 @@ class AppInterface2:
             image=self.return_image,
             command=self.soon_message
         )
-        self.return_btn.place(x=860,y=15)
-
+        self.return_btn.place(x=860, y=15)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
@@ -411,21 +420,20 @@ class AppInterface2:
 
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
-        # self.boton_toggle.config(text="Detener", command=self.stop_animation, image=self.imagen_detener)
         self.start_animation()
-        time.sleep(0.1)
+        time.sleep(0.05)
+        self.set_origin()
+        time.sleep(0.05)
         self.turn_on_motor()
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.send_value()
 
     def animation_off_write_serial(self):
         self.combobox.config(state="readonly")
-        # self.boton_toggle.config(text="Iniciar", command=self.start_animation, image=self.imagen_iniciar)
         self.stop_animation()
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.turn_off_motor()
-        time.sleep(0.1)
-        #self.send_value()
+        time.sleep(0.05)
 
     def achieved_test(self, color):
         self.highlight(color)
@@ -452,7 +460,8 @@ class AppInterface2:
                 self.mensaje_label1.config(text="El límite del valor", fg="#F43838", bg="#000000")
                 self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#F43838", bg="#000000")
                 return
-            elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit()) or int(self.value) == 0):
+            elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
+                                               or int(self.value) == 0):
                 self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#F43838", bg="#000000")
                 self.mensaje_label2.config(text="de fuerza", fg="#F43838", bg="#000000")
                 return
@@ -537,9 +546,9 @@ class AppInterface2:
         # Extract the number using split()
         nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
         self.arduino_lock.acquire()
-        time.sleep(0.02)
+        time.sleep(0.05)
         self.ser.write(nivel.encode('ascii'))  # Send only the number
-        time.sleep(0.02)
+        time.sleep(0.05)
         self.arduino_lock.release()
         print(nivel)  # Print only the number
         print(self.combobox.get())
@@ -548,14 +557,23 @@ class AppInterface2:
         if self.ser is not None:
             cadena = str(998)
             self.arduino_lock.acquire()
-            time.sleep(0.02)
+            time.sleep(0.05)
             self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.02)
+            time.sleep(0.05)
             self.arduino_lock.release()
 
     def turn_off_motor(self):
         if self.ser is not None:
             cadena = str(999)
+            self.arduino_lock.acquire()
+            time.sleep(0.05)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.05)
+            self.arduino_lock.release()
+
+    def set_origin(self):
+        if self.ser is not None:
+            cadena = str(997)
             self.arduino_lock.acquire()
             time.sleep(0.02)
             self.ser.write(cadena.encode('ascii'))
@@ -572,9 +590,59 @@ class AppInterface2:
 
     def on_closing(self):
         self.turn_off_motor()
-        time.sleep(0.02)
+        time.sleep(0.05)
         self.disconnect_arduino()
         self.root.destroy()
+
+
+class LegAnimation:
+    def __init__(self, canvas, image_folder_path):
+        self.canvas = canvas
+        self.image_folder_path = image_folder_path
+
+        # Load PNG frames from the folder
+        self.frames = self.load_png_frames(image_folder_path)
+
+        # Create a label to display the image frame
+        self.label = tk.Label(self.canvas)
+        self.label.place(x=70, y=180)  # Place the label
+
+        self.text_id = self.canvas.create_text(
+            1200, 315,  # Coordinates (x, y)
+            text="0°",  # Text content
+            font=("Arial", 16),  # Font and size
+            fill="black"  # Text color
+        )
+
+        # Initialize with the first frame
+        self.update_frame(0)  # Start with position 0
+
+    def load_png_frames(self, image_folder_path):
+        frames = []
+        # Sort files to ensure correct order
+        files = sorted(Path(image_folder_path).iterdir(), key=lambda x: int(x.stem.split("_")[-1]))
+        for file in files:
+            if file.is_file() and file.suffix.lower() == ".png":
+                image = Image.open(file)
+                frames.append(image)
+        return frames
+
+    def input_to_frame(self, position, total_frames, degrees_per_frame=2.3):
+        frame_index = int(position / degrees_per_frame)
+        # Ensure the frame index is within bounds
+        frame_index = max(0, min(frame_index, total_frames - 1))
+        return frame_index
+
+    def update_frame(self, position):
+        """Update the displayed frame based on position value."""
+        frame_index = self.input_to_frame(position, len(self.frames))
+        frame = self.frames[frame_index]
+        frame_image = ImageTk.PhotoImage(image=frame)
+        self.label.config(image=frame_image)
+        self.label.image = frame_image  # Keep a reference to avoid garbage collection
+
+        # Update the text with the current position value
+        self.canvas.itemconfig(self.text_id, text=f"{position:.1f}°")
 
 
 if __name__ == "__main__":
