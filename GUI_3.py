@@ -421,7 +421,7 @@ class AppInterface2:
             borderwidth=0,
             bg=self.used_color,
             command=self.save_boton)
-        self.boton_save.place(x=707, y=640)
+        self.boton_save.place(x=705, y=650)
         self.boton_save.config(state="disabled")
 
         self.boton_toggle = tk.Button(
@@ -434,7 +434,7 @@ class AppInterface2:
             borderwidth=0,
             bg=self.used_color,
             image=self.imagen_iniciar)
-        self.boton_toggle.place(x=745, y=500)
+        self.boton_toggle.place(x=745, y=560)
         self.boton_toggle.config(state="disabled")
 
         self.imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
@@ -444,12 +444,12 @@ class AppInterface2:
                                            command=lambda: self.achieved_test("#06D7A0"), relief="flat",
                                            bg=self.used_color)
 
-        self.yes_button_widget.place(x=670, y=570)
+        self.yes_button_widget.place(x=770, y=200)
 
         self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
                                           command=lambda: self.failed_test("#F04770"), relief="flat",
                                           bg=self.used_color)
-        self.no_button_widget.place(x=820, y=570)
+        self.no_button_widget.place(x=770, y=300)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
