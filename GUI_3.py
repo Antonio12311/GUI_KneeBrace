@@ -240,10 +240,10 @@ class AppInterface2:
                         if len(values) >= 2:
                             try:
                                 rad = abs(float(values[0]))
-                                position = (rad * 180) / math.pi
-                                torque = abs(float(values[1]))
+                                self.position = (rad * 180) / math.pi
+                                self.torque = abs(float(values[1]))
                                 if self.leg_animation:
-                                    self.leg_animation.update_frame(position, torque)
+                                    self.leg_animation.update_frame(self.position, self.torque)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -434,38 +434,31 @@ class AppInterface2:
         self.boton_toggle.place(x=745, y=560)
         self.boton_toggle.config(state="disabled")
 
-        self.imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
-        self.imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
-
-        self.yes_button_widget = tk.Button(self.canvas, image=self.imagen_SI, state="disabled",
-                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat",
-                                           bg=self.used_color)
-
-        self.yes_button_widget.place(x=770, y=200)
-
-        self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
-                                          command=lambda: self.failed_test("#F04770"), relief="flat",
-                                          bg=self.used_color)
-        self.no_button_widget.place(x=770, y=300)
-
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
         self.achieved_levels = [False] * 5
 
-    def animation_on_write_serial(self):
-        self.combobox.config(state="disabled")
-        self.start_animation()
-        time.sleep(0.10)
-        self.turn_on_motor()
-        time.sleep(0.10)
-        self.send_value()
+        self.canvas.create_text(780, 180, text="Ángulo máx.", font=("Georgia", 14), fill="black")
+        self.canvas.create_text(780, 300, text="Ángulo min.", font=("Georgia", 14), fill="black")
+        self.max_angle_text = self.canvas.create_text(780, 220, text="0.0 °", font=("Georgia", 14), fill="black")
+        self.min_angle_text = self.canvas.create_text(780, 330, text="0.0 °", font=("Georgia", 14), fill="black")
 
-    def animation_off_write_serial(self):
-        self.combobox.config(state="readonly")
-        self.stop_animation()
-        time.sleep(0.05)
-        self.turn_off_motor()
-        time.sleep(0.05)
+        self.save_max_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_max_angle)
+        self.save_max_angle.place(x=870.0, y=210.0, width=100.0, height=20.0)
+        self.save_min_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_min_angle)
+        self.save_min_angle.place(x=870.0, y=320.0, width=100.0, height=20.0)
+
+
+    def save_min_angle(self):
+        self.canvas.itemconfig(self.min_angle_text, text=f"{self.position:.1f} °")
+        self.max_angle = self.position
+
+    def save_max_angle(self):
+        self.canvas.itemconfig(self.max_angle_text, text=f"{self.position:.1f} °")
+        self.min_angle = self.position
+
+    def timer_test(self):
+        if
 
     def achieved_test(self, color):
         self.highlight(color)
@@ -530,8 +523,6 @@ class AppInterface2:
                 self.blinking(self.squares[self.level1_num - 1])
 
                 self.combobox.config(state="disabled")
-                self.yes_button_widget.config(state="normal")
-                self.no_button_widget.config(state="normal")
                 self.user_input.config(state="disabled")
                 self.boton_save.config(state="disabled")
                 self.boton_toggle.config(text="Detener", image=self.imagen_detener)
@@ -546,8 +537,6 @@ class AppInterface2:
     def stop_animation(self):
         self.level = self.combobox.get()
         self.active_animation = False
-        self.yes_button_widget.config(state="disabled")
-        self.no_button_widget.config(state="disabled")
         self.combobox.config(state="normal")
         self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, state="disabled")
         self.boton_save.config(state="normal")
@@ -582,6 +571,21 @@ class AppInterface2:
         self.ser.write((nivel + "\n").encode('ascii'))  # Send only the number
         time.sleep(0.05)
         self.arduino_lock.release()
+
+    def animation_on_write_serial(self):
+        self.combobox.config(state="disabled")
+        self.start_animation()
+        time.sleep(0.10)
+        self.turn_on_motor()
+        time.sleep(0.10)
+        self.send_value()
+
+    def animation_off_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.stop_animation()
+        time.sleep(0.05)
+        self.turn_off_motor()
+        time.sleep(0.05)
 
     def turn_on_motor(self):
         if self.ser is not None:
