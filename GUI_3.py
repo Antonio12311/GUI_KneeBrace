@@ -172,16 +172,7 @@ class AppInterface2:
             fill="#000000",
             font=("Georgia", 14)
         )
-    """
-    def grados_widget(self):
-        self.ruta_img = relative_to_assets("AngleBox.png")
-        self.image_widget3 = PhotoImage(file=self.ruta_img)
-        self.box_bg_1 = self.canvas.create_image(
-            648.0,
-            360.0,
-            image=self.image_widget3
-        )
-    """
+
     def create_canvas(self):
         canvas = tk.Canvas(
             self.root,
@@ -242,9 +233,8 @@ class AppInterface2:
                                 rad = abs(float(values[0]))
                                 position = (rad * 180) / math.pi
                                 torque = abs(float(values[1]))
-                                time.sleep(0.05)
                                 if self.leg_animation:
-                                    self.leg_animation.update_frame(position,torque)
+                                    self.leg_animation.update_frame(position, torque)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -298,8 +288,6 @@ class AppInterface2:
 
     def disconnect_arduino(self):
         self.turn_off_motor()
-        self.stop_animation()
-        self.boton_save.config(state="disabled")
         if self.ser and self.ser.is_open:
             self.stop_threads = True
             self.ser.close()
@@ -318,9 +306,9 @@ class AppInterface2:
         else:
             self.animation_off_write_serial()
             self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
-            if self.level.startswith("Nivel "):
-                level_num = int(self.level.split(" ")[1])
-                self.squares[level_num].config(bg="#FFFFFF")
+        if self.level.startswith("Nivel "):
+            level_num = int(self.level.split(" ")[1])
+            self.squares[level_num].config(bg="#FFFFFF")
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -458,11 +446,9 @@ class AppInterface2:
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
         self.start_animation()
-        time.sleep(0.05)
-        self.set_origin()
-        time.sleep(0.05)
+        time.sleep(0.10)
         self.turn_on_motor()
-        time.sleep(0.05)
+        time.sleep(0.10)
         self.send_value()
 
     def animation_off_write_serial(self):
@@ -584,15 +570,13 @@ class AppInterface2:
         nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
         self.arduino_lock.acquire()
         time.sleep(0.05)
-        self.ser.write(nivel.encode('ascii'))  # Send only the number
+        self.ser.write((nivel + "\n").encode('ascii'))  # Send only the number
         time.sleep(0.05)
         self.arduino_lock.release()
-        print(nivel)  # Print only the number
-        print(self.combobox.get())
 
     def turn_on_motor(self):
         if self.ser is not None:
-            cadena = str(998)
+            cadena = "998\n"
             self.arduino_lock.acquire()
             time.sleep(0.05)
             self.ser.write(cadena.encode('ascii'))
@@ -601,20 +585,11 @@ class AppInterface2:
 
     def turn_off_motor(self):
         if self.ser is not None:
-            cadena = str(999)
+            cadena = "999\n"
             self.arduino_lock.acquire()
             time.sleep(0.05)
             self.ser.write(cadena.encode('ascii'))
             time.sleep(0.05)
-            self.arduino_lock.release()
-
-    def set_origin(self):
-        if self.ser is not None:
-            cadena = str(997)
-            self.arduino_lock.acquire()
-            time.sleep(0.02)
-            self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.02)
             self.arduino_lock.release()
 
     def init_widgets(self):
