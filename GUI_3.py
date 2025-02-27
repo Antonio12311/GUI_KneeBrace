@@ -68,6 +68,15 @@ class AppInterface1:
                               font=("Georgia", 15))  # Expedient #
         self.entry_02.place(x=420.0, y=300.0, width=370.0, height=31.0)
 
+        self.settings_button_image = PhotoImage(file=relative_to_assets("Settings_Btn.png"))
+        self.settings_button = Button(
+            self.canvas,
+            image=self.settings_button_image,
+            relief="flat",
+            bg=self.used_color
+        )
+        self.settings_button.place(x=900, y=30)
+
         genders = ["Masculino", "Femenino"]
         self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Georgia", 14))
         self.combobox1.config(state="readonly")
