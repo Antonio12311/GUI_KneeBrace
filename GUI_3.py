@@ -148,7 +148,7 @@ class AppInterface2:
         self.serial_widgets()
         self.name_entry_widget()
         #  self.grados_widget()
-        self.create_combo_widget()
+        self.create_widgets()
         self.apply_combox_changes()
         self.leg_animation = LegAnimation(self.canvas, self.frames_path)
         self.init_widgets()
@@ -172,16 +172,7 @@ class AppInterface2:
             fill="#000000",
             font=("Georgia", 14)
         )
-    """
-    def grados_widget(self):
-        self.ruta_img = relative_to_assets("AngleBox.png")
-        self.image_widget3 = PhotoImage(file=self.ruta_img)
-        self.box_bg_1 = self.canvas.create_image(
-            648.0,
-            360.0,
-            image=self.image_widget3
-        )
-    """
+
     def create_canvas(self):
         canvas = tk.Canvas(
             self.root,
@@ -240,11 +231,11 @@ class AppInterface2:
                         if len(values) >= 2:
                             try:
                                 rad = abs(float(values[0]))
-                                position = (rad * 180) / math.pi
-                                torque = abs(float(values[1]))
+                                self.position = (rad * 180) / math.pi
+                                self.torque = abs(float(values[1]))
                                 time.sleep(0.05)
                                 if self.leg_animation:
-                                    self.leg_animation.update_frame(position,torque)
+                                    self.leg_animation.update_frame(self.position, self.torque)
                             except ValueError:
                                 print("Error: Invalid data format. Skipping this line.")
                         else:
@@ -351,7 +342,7 @@ class AppInterface2:
     def soon_message(self):
         messagebox.showinfo("PROXIMAMENTE", "Menú, pestañas de registro y mejora visual en desarrollo")
 
-    def create_combo_widget(self):
+    def create_widgets(self):
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
         self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Georgia", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
@@ -437,23 +428,31 @@ class AppInterface2:
         self.boton_toggle.place(x=745, y=560)
         self.boton_toggle.config(state="disabled")
 
-        self.imagen_SI = PhotoImage(file=relative_to_assets("ACHIEVED_BTM.png"))
-        self.imagen_NO = PhotoImage(file=relative_to_assets("FAILED_BTN.png"))
+        self.canvas.create_text(735, 160, anchor="nw", text="Ángulo máx.", fill="#000000", font=("Georgia", 12))
+        self.text_max_angle = self.canvas.create_text(735, 190, anchor="nw", text="0.0",
+                                                      fill="#000000", font=("Georgia", 12))
 
-        self.yes_button_widget = tk.Button(self.canvas, image=self.imagen_SI, state="disabled",
-                                           command=lambda: self.achieved_test("#06D7A0"), relief="flat",
-                                           bg=self.used_color)
+        self.max_save_button = ttk.Button(self.canvas, text="Guardar", command=self.save_max)
+        self.max_save_button.place(x=850.0, y=185.0, width=100.0, height=30.0)
 
-        self.yes_button_widget.place(x=770, y=200)
+        self.canvas.create_text(735, 230, anchor="nw", text="Ángulo min.", fill="#000000", font=("Georgia", 12))
+        self.text_min_angle = self.canvas.create_text(735, 260, anchor="nw", text="0.0",
+                                                      fill="#000000", font=("Georgia", 12))
 
-        self.no_button_widget = tk.Button(self.canvas, image=self.imagen_NO, state="disabled",
-                                          command=lambda: self.failed_test("#F04770"), relief="flat",
-                                          bg=self.used_color)
-        self.no_button_widget.place(x=770, y=300)
+        self.min_save_button = ttk.Button(self.canvas, text="Guardar", command=self.save_min)
+        self.min_save_button.place(x=850.0, y=255.0, width=100.0, height=30.0)
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
         self.achieved_levels = [False] * 5
+
+    def save_max(self):
+        self.max_position = self.position
+        self.canvas.itemconfig(self.text_max_angle, text=f"{self.position:.1f}")
+
+    def save_min(self):
+        self.min_position = self.position
+        self.canvas.itemconfig(self.text_min_angle, text=f"{self.position:.1f}")
 
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
@@ -535,8 +534,7 @@ class AppInterface2:
                 self.blinking(self.squares[self.level1_num - 1])
 
                 self.combobox.config(state="disabled")
-                self.yes_button_widget.config(state="normal")
-                self.no_button_widget.config(state="normal")
+
                 self.user_input.config(state="disabled")
                 self.boton_save.config(state="disabled")
                 self.boton_toggle.config(text="Detener", image=self.imagen_detener)
@@ -551,8 +549,7 @@ class AppInterface2:
     def stop_animation(self):
         self.level = self.combobox.get()
         self.active_animation = False
-        self.yes_button_widget.config(state="disabled")
-        self.no_button_widget.config(state="disabled")
+
         self.combobox.config(state="normal")
         self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, state="disabled")
         self.boton_save.config(state="normal")
