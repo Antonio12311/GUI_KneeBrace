@@ -108,14 +108,14 @@ class AppInterface1:
         self.canvas.create_image(105, 376, image=self.date_bg_image, anchor="nw")
 
         # Next page button
-        self.register_bg_image = PhotoImage(file=relative_to_assets("Group 16.png"))
+        self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
         self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                        command=self.switch_to_interface1, state="normal", relief="flat",
                                        borderwidth=0, bg=self.used_color,)
         self.switch_button.place(x=224.0, y=476.0)
 
         # Settings page button
-        self.settings_bg_image = PhotoImage(file=relative_to_assets("configuracion-cog 1.png"))
+        self.settings_bg_image = PhotoImage(file=relative_to_assets("COG_BG.png"))
         self.settings_button = Button(
             self.canvas,
             image=self.settings_bg_image,
