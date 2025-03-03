@@ -31,20 +31,28 @@ def relative_to_assets(path: str) -> Path:
 class AppInterface1:
     def __init__(self, root):
         self.root = root
-        self.used_color = '#D4DBF5'
-        self.canvas = self.create_canvas()
-        self.root.geometry("1000x720")
+        self.used_color = 'white'
+        self.dimension_x0 = "630"
+        self.dimension_y0 = "550"
+
+        self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
+        self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
+        self.x0 = (self.screen_width // 2) - (int(self.dimension_x0) // 2)  # Calcula la posición X
+        self.y0 = (self.screen_height // 2) - (int(self.dimension_y0) // 2)  # Calcula la posición Y
+        self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
+
         self.root.resizable(False, False)
         self.root.configure(bg=self.used_color)
+        self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
         self.validate_func = self.canvas.register(validate_number_input)
         self.init_widgets()
 
-    def create_canvas(self):
+    def create_canvas(self, dimension_y, dimension_x):
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
-            height=720,
-            width=1000,
+            height=int(dimension_y),
+            width=int(dimension_x),
             bd=0,
             highlightthickness=0,
             relief="ridge"
@@ -53,42 +61,68 @@ class AppInterface1:
         return canvas
 
     def init_widgets(self):
-        self.switch_button = ttk.Button(self.canvas, text="Go to Interface 1", command=self.switch_to_interface1)
-        self.switch_button.place(x=850.0, y=670.0, width=120.0, height=20.0)
+        # Title
+        self.canvas.create_text(145, 25, anchor="nw", text="Registro de paciente", fill="#000000", font=("Inter", 30))
 
-        self.entry_00 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                             font=("Georgia", 15))  # Name
-        self.entry_00.place(x=420.0, y=200.0, width=370.0, height=31.0)
+        # Patient name
 
+        self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
+        self.canvas.create_image(105, 101, image=self.patient_bg_image, anchor="nw")
+
+        self.entry_00 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, font=("Inter", 13))
+        self.entry_00.place(x=140.0, y=127.0, width=320.0, height=20.0)
+
+        # Expedient #
+        self.exp_bg_image = PhotoImage(file=relative_to_assets("EXP_ENTR_BG.png"))
+        self.canvas.create_image(105, 169, image=self.exp_bg_image, anchor="nw")
+        self.entry_02 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal", font=("Inter", 13))
+        self.entry_02.place(x=140.0, y=195.0, width=320.0, height=20.0)
+
+        # Age
+        self.age_bg_image = PhotoImage(file=relative_to_assets("AGE_ENTRY_BG.png"))
+        self.canvas.create_image(105, 237, image=self.age_bg_image, anchor="nw")
         self.entry_01 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                              font=("Georgia", 15), validate="key", validatecommand=(self.validate_func, "%P"))  # Age
-        self.entry_01.place(x=420.0, y=250.0, width=100.0, height=31.0)
+                              font=("Inter", 13), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.entry_01.place(x=140.0, y=263.0, width=100.0, height=20.0)
 
-        self.entry_02 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                              font=("Georgia", 15))  # Expedient #
-        self.entry_02.place(x=420.0, y=300.0, width=370.0, height=31.0)
+        # Sex
+        self.sex_bg_image = PhotoImage(file=relative_to_assets("SEX_ENTRY_BG.png"))
+        self.canvas.create_image(327, 237, image=self.age_bg_image, anchor="nw")
+        genders = ["Masculino", "Femenino"]
+        self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Inter", 12))
+        self.combobox1.config(state="readonly")
+        self.combobox1.set("...")
+        self.combobox1.place(x=360.0, y=262.0, width=120.0, height=20)
 
-        self.settings_button_image = PhotoImage(file=relative_to_assets("Settings_Btn.png"))
+        # Physical activity
+        self.act_bg_image = PhotoImage(file=relative_to_assets("ACT_ENTRY_BG.png"))
+        self.canvas.create_image(105, 308, image=self.act_bg_image, anchor="nw")
+        lifestl = ["Sedentario", "Actividad moderada", "Deportista"]
+        self.combobox2 = ttk.Combobox(self.canvas, values=lifestl, font=("Inter", 13))
+        self.combobox2.config(state="readonly")
+        self.combobox2.set("...")
+        self.combobox2.place(x=140.0, y=333.0, width=200.0, height=24)
+
+        # Date
+        self.date_bg_image = PhotoImage(file=relative_to_assets("DATE_ENTRY_BG.png"))
+        self.canvas.create_image(105, 376, image=self.date_bg_image, anchor="nw")
+
+        # Next page button
+        self.register_bg_image = PhotoImage(file=relative_to_assets("Group 16.png"))
+        self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
+                                       command=self.switch_to_interface1, state="normal", relief="flat",
+                                       borderwidth=0, bg=self.used_color,)
+        self.switch_button.place(x=224.0, y=476.0)
+
+        # Settings page button
+        self.settings_bg_image = PhotoImage(file=relative_to_assets("configuracion-cog 1.png"))
         self.settings_button = Button(
             self.canvas,
-            image=self.settings_button_image,
+            image=self.settings_bg_image,
             relief="flat",
             bg=self.used_color
         )
-        self.settings_button.place(x=900, y=30)
-
-        genders = ["Masculino", "Femenino"]
-        self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Georgia", 14))
-        self.combobox1.config(state="readonly")
-        self.combobox1.set("...")  # Sex
-
-        self.combobox1.place(x=670.0, y=250.0, width=120.0, height=31)
-
-        self.canvas.create_text(400, 100, anchor="nw", text="Registro de paciente", fill="#000000", font=("Georgia", 20))
-        self.canvas.create_text(250, 200, anchor="nw", text="Nombre de pac. :", fill="#000000", font=("Georgia", 14))
-        self.canvas.create_text(250, 250, anchor="nw", text="Edad :", fill="#000000", font=("Georgia", 14))
-        self.canvas.create_text(580, 250, anchor="nw", text="Sexo :", fill="#000000", font=("Georgia", 14))
-        self.canvas.create_text(250, 300, anchor="nw", text="# de expediente :", fill="#000000", font=("Georgia", 14))
+        self.settings_button.place(x=544, y=476)
 
     def get_all_entries(self):
         return (
@@ -142,21 +176,30 @@ class AppInterface2:
         self.ser = None
         self.type_input = None
         self.stop_threads = False
+        self.is_connected = False
         self.active_animation = True
         self.blink_state = True
-        self.squares = []
-        self.root = root
         self.frames_path = Path(__file__).resolve().parent / "light_video"
         self.app_interface = init_interface
-        self.root.geometry("1000x720")
+        self.squares = []
+        self.root = root
+        self.dimension_x1 = "1000"
+        self.dimension_y1 = "720"
+
+        self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
+        self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
+        x = (self.screen_width // 2) - (int(self.dimension_x1) // 2)  # Calcula la posición X
+        y = (self.screen_height // 2) - (int(self.dimension_y1) // 2)  # Calcula la posición Y
+        self.root.geometry(f"{self.dimension_x1}x{self.dimension_y1}+{x}+{y}")
+
+        self.root.geometry(self.dimension_x1+"x"+self.dimension_y1)
         self.root.resizable(False, False)
-        self.used_color = '#D4DBF5'
+        self.used_color = 'white'
         self.root.configure(bg=self.used_color)
-        self.canvas = self.create_canvas()
+        self.canvas = self.create_canvas(self.dimension_x1, self.dimension_y1)
         self.print_all_entries()
         self.serial_widgets()
         self.name_entry_widget()
-        #  self.grados_widget()
         self.create_combo_widget()
         self.apply_combox_changes()
         self.leg_animation = LegAnimation(self.canvas, self.frames_path)
@@ -166,28 +209,21 @@ class AppInterface2:
         self.entries = self.app_interface.get_all_entries()
 
     def name_entry_widget(self):
-        self.ruta_img = relative_to_assets("EntryNameLabel.png")
-        self.image_widget = PhotoImage(file=self.ruta_img)
-        self.entry_bg_1 = self.canvas.create_image(
-            480.0,
-            37.0,
-            image=self.image_widget
-        )
         self.canvas.create_text(
-            35,
-            25,
+            50,
+            100,
             anchor="nw",
-            text=f"Nombre de pac. :     {self.entries[0]}",
+            text=f"Posición de la pierna de :     {self.entries[0]}",
             fill="#000000",
-            font=("Georgia", 14)
+            font=("Inter", 13)
         )
 
-    def create_canvas(self):
+    def create_canvas(self,dimension_x, dimension_y):
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
-            height=720,
-            width=1000,
+            height=int(dimension_y),
+            width=int(dimension_x),
             bd=0,
             highlightthickness=0,
             relief="ridge"
@@ -197,31 +233,28 @@ class AppInterface2:
 
     def serial_widgets(self):
 
-        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Georgia", 14),
+        self.status_label = tk.Label(self.canvas, text="Sin conexión", fg="red", font=("Inter", 12),
                                      bg=self.used_color)
-        self.status_label.place(x=85.0, y=530.0)
+        self.status_label.place(x=75.0, y=620.0)
 
-        self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
-        self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN1.png"))
-        self.connect_button = Button(
+        self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN0.png"))
+        self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN0.png"))
+
+
+        self.toggle_connection_button = Button(
             self.canvas,
             image=self.connect_button_image,
-            command=self.connect_to_arduino,
+            command=self.toggle_connection,
             relief="flat",
             bg=self.used_color
         )
-        self.connect_button.place(x=70, y=570)
+        self.toggle_connection_button.place(x=70, y=550)
 
-        self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN1.png"))
-        self.disconnect_button = Button(
-            self.canvas,
-            image=self.disconnect_button_image,
-            command=self.disconnect_arduino,
-            state="disabled",
-            relief="flat",
-            bg=self.used_color
-        )
-        self.disconnect_button.place(x=70, y=630)
+    def toggle_connection(self):
+        if self.is_connected:
+            self.disconnect_arduino()
+        else:
+            self.connect_to_arduino()
 
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
@@ -271,11 +304,11 @@ class AppInterface2:
                 try:
                     self.arduino_lock = threading.Lock()
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
-                    self.status_label.config(text=f"Connected to {arduino_port}", fg="green", font=("Georgia", 14))
-                    self.connect_button.config(state="disabled")
-                    self.disconnect_button.config(state="normal")
+                    self.status_label.config(text=f"Connected to {arduino_port}", fg="green", font=("Inter", 12))
+                    self.toggle_connection_button.config(image=self.disconnect_button_image)
                     self.combobox.config(state="normal")
                     self.apply_button_widget.config(state="normal")
+                    self.is_connected = True
                     self.stop_threads = False
 
                 except Exception as e:
@@ -301,11 +334,11 @@ class AppInterface2:
             self.stop_threads = True
             self.ser.close()
             self.ser = None
-            self.status_label.config(text="Sin conexión", fg="red", font=("Georgia", 14))
-            self.connect_button.config(state="normal")
-            self.disconnect_button.config(state="disabled")
+            self.status_label.config(text="Sin conexión", fg="red", font=("Inter", 12))
+            self.toggle_connection_button.config(image=self.connect_button_image)
             self.combobox.config(state="disabled")
             self.apply_button_widget.config(state="disabled")
+            self.is_connected = False
             self.stop_threads = False
 
     def toggle_boton(self):
@@ -349,67 +382,82 @@ class AppInterface2:
         messagebox.showinfo("PROXIMAMENTE", "Menú, pestañas de registro y mejora visual en desarrollo")
 
     def create_combo_widget(self):
+        # Title
+        self.canvas.create_text(350, 10, anchor="nw", text="Estudio automático", fill="#000000", font=("Inter", 30))
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
-        self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Georgia", 14), width=20)
+        self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Inter", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
         self.combobox.config(state="disabled")  # Make the combobox readonly
-        self.combobox.place(x=300, y=555)
+        self.combobox.place(x=360, y=555)
 
         self.cmd_entry = self.canvas.register(self.validate_input)
-        self.user_input = tk.Entry(self.canvas, font=("Georgia", 16), width=10, validate="key",
+        self.user_input = tk.Entry(self.canvas, font=("Inter", 16), width=10, validate="key",
                                    validatecommand=(self.cmd_entry, "%P"), bg="white")
-        self.user_input.place(x=350, y=600)
+        self.user_input.place(x=410, y=600)
         self.user_input.config(state="disabled")
 
-        self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN.png"))
+        self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
                                              command=self.apply_combox_changes, relief="flat", borderwidth=5,
                                              bg=self.used_color)
-        self.apply_button_widget.place(x=300, y=640)
+        self.apply_button_widget.place(x=350, y=640)
         self.apply_button_widget.config(state="disabled")
 
-        self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Georgia", 12), bg=self.used_color)
-        self.mensaje_label1.place(x=490, y=650)
-        self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Georgia", 12), bg=self.used_color)
-        self.mensaje_label2.place(x=490, y=670)
+        self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
+        self.mensaje_label1.place(x=570, y=650)
+        self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
+        self.mensaje_label2.place(x=570, y=670)
 
-        self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Georgia", 18), bg=self.used_color, fg="#000000")
-        self.strengthT_label.place(x=300, y=600)
-        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Georgia", 18), bg=self.used_color, fg="#000000")
-        self.strengthKG_label.place(x=480, y=600)
+        self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#000000")
+        self.strengthT_label.place(x=360, y=600)
+        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Inter", 18), bg=self.used_color, fg="#000000")
+        self.strengthKG_label.place(x=540, y=600)
 
-        self.nivelesF_label = tk.Label(self.canvas, text="Niveles de fuerza", font=("Georgia", 16),
-                                       bg=self.used_color, fg="#000000")
-        self.nivelesF_label.place(x=300, y=520)
+        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza",font=("Inter", 13),
+                                                      fill="black")
 
-        self.position_label = tk.Label(self.canvas, text="Posición de la pierna", font=("Georgia", 16),
-                                       bg=self.used_color, fg="#000000")
-        self.position_label.place(x=240, y=110)
+        self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
+        self.canvas.create_image(709, 135, image=self.indicator1_bg_image, anchor="nw")
+
+        self.canvas.create_text(790, 180, text="Ángulo máx.", font=("Inter", 13), fill="black")
+        self.canvas.create_text(790, 300, text="Ángulo min.", font=("Inter", 13), fill="black")
+        self.max_angle_text = self.canvas.create_text(780, 220, text="0.0 °", font=("Inter", 13), fill="black")
+        self.min_angle_text = self.canvas.create_text(780, 330, text="0.0 °", font=("Inter", 13), fill="black")
+
+        self.save_max_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_max_angle)
+        self.save_max_angle.place(x=850.0, y=210.0, width=100.0, height=20.0)
+        self.save_min_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_min_angle)
+        self.save_min_angle.place(x=850.0, y=320.0, width=100.0, height=20.0)
+
+        self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
+        self.canvas.create_image(40, 134, image=self.leg_bg_image, anchor="nw")
+
+        self.inidcator_bg_image = PhotoImage(file=relative_to_assets("INDICATOR_BG.png"))
+        self.canvas.create_image(40, 445, image=self.inidcator_bg_image, anchor="nw")
+
+        self.inidcator_bg_image1 = PhotoImage(file=relative_to_assets("INDICATOR_BG.png"))
+        self.canvas.create_image(300, 445, image=self.inidcator_bg_image1, anchor="nw")
+
+        self.grados_text = self.canvas.create_text(100, 470, text="Grados:", font=("Inter", 13), fill="black")
+        self.torque_text = self.canvas.create_text(360, 470, text="Torque:", font=("Inter", 13), fill="black")
+
+        self.gauge_bg_image = PhotoImage(file=relative_to_assets("GAUGE_BG0.png"))
+        self.canvas.create_image(562, 135, image=self.gauge_bg_image, anchor="nw")
 
         for i in range(5):
-            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Georgia", 12), width=11, height=3, bd=0,
-                                          highlightbackground=self.used_color, highlightcolor=self.used_color,
-                                          highlightthickness=3, bg="white")
-            self.square_widget.place(x=590, y=385 - (i * 57))
+            self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Inter", 10), width=12, height=4, bd=0,
+                                          highlightbackground="#D3D4D9",
+                                          highlightthickness=1, bg="white")
+            self.square_widget.place(x=583, y=398 - (i * 60))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = tk.Label(self.canvas, text="Niveles", font=("Georgia", 16), bg=self.used_color,
-                                     fg="#000000")
-        self.titleC_label.place(x=610, y=110)
+        self.titleC_label = self.canvas.create_text(600, 110, text="Niveles", font=("Inter", 13), fill="black")
 
-        self.canvas.create_rectangle(70, 455, 320, 490, fill="white", outline="")  # Angle bd
-        self.canvas.create_rectangle(330, 455, 573, 490, fill="white", outline="")  # Torque bd
+        self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN0.png"))
+        self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN0.png"))
 
-        self.grados_label = tk.Label(self.canvas, text="Grados:", font=("Georgia", 14), bg="white", fg="#000000")
-        self.grados_label.place(x=85, y=455)
 
-        self.torque_label = tk.Label(self.canvas, text="Torque:", font=("Georgia", 14), bg="white", fg="#000000")
-        self.torque_label.place(x=340, y=455)
-
-        self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN.png"))
-        self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN.png"))
-
-        self.save_image = PhotoImage(file=relative_to_assets("SAVE_BTN.png"))
+        self.save_image = PhotoImage(file=relative_to_assets("SAVE_BTN0.png"))
         self.boton_save = tk.Button(
             self.canvas,
             image=self.save_image,
@@ -418,35 +466,26 @@ class AppInterface2:
             borderwidth=0,
             bg=self.used_color,
             command=self.save_boton)
-        self.boton_save.place(x=705, y=650)
+        self.boton_save.place(x=720, y=545)
         self.boton_save.config(state="disabled")
 
         self.boton_toggle = tk.Button(
             self.canvas,
             text="Iniciar",
-            font=("Georgia", 16),
+            font=("Inter", 16),
             command=self.toggle_boton,
             state="normal",
             relief="flat",
             borderwidth=0,
             bg=self.used_color,
             image=self.imagen_iniciar)
-        self.boton_toggle.place(x=745, y=560)
+        self.boton_toggle.place(x=734, y=410)
         self.boton_toggle.config(state="disabled")
 
         self.combobox.bind("<<ComboboxSelected>>", self.update_state)
 
         self.achieved_levels = [False] * 5
 
-        self.canvas.create_text(780, 180, text="Ángulo máx.", font=("Georgia", 14), fill="black")
-        self.canvas.create_text(780, 300, text="Ángulo min.", font=("Georgia", 14), fill="black")
-        self.max_angle_text = self.canvas.create_text(780, 220, text="0.0 °", font=("Georgia", 14), fill="black")
-        self.min_angle_text = self.canvas.create_text(780, 330, text="0.0 °", font=("Georgia", 14), fill="black")
-
-        self.save_max_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_max_angle)
-        self.save_max_angle.place(x=870.0, y=210.0, width=100.0, height=20.0)
-        self.save_min_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_min_angle)
-        self.save_min_angle.place(x=870.0, y=320.0, width=100.0, height=20.0)
 
 
     def save_min_angle(self):
@@ -457,8 +496,6 @@ class AppInterface2:
         self.canvas.itemconfig(self.max_angle_text, text=f"{self.position:.1f} °")
         self.min_angle = self.position
 
-    def timer_test(self):
-        if
 
     def achieved_test(self, color):
         self.highlight(color)
@@ -521,7 +558,6 @@ class AppInterface2:
                 self.active_animation = True
                 self.blink_state = True
                 self.blinking(self.squares[self.level1_num - 1])
-
                 self.combobox.config(state="disabled")
                 self.user_input.config(state="disabled")
                 self.boton_save.config(state="disabled")
@@ -529,7 +565,7 @@ class AppInterface2:
 
     def blinking(self, square):
         if self.active_animation:
-            color = "blue" if self.blink_state else "white"
+            color = "#60AFFF" if self.blink_state else "white"
             square.config(bg=color)
             self.blink_state = not self.blink_state
             square.after(500, lambda: self.blinking(square))
@@ -616,10 +652,13 @@ class AppInterface2:
             image=self.return_image,
             command=lambda: [self.switch_to_main_interface(), self.app_interface.reset_entries()]
         )
-        self.return_btn.place(x=860, y=15)
+        self.return_btn.place(x=810, y=645)
 
     def switch_to_main_interface(self):
         self.canvas.place_forget()  # Hide the current interface
+        self.disconnect_arduino()
+        self.root.geometry(f"{self.app_interface.dimension_x0}x{self.app_interface.dimension_y0}"
+                           f"+{self.app_interface.x0}+{self.app_interface.y0}")
         self.app_interface.show()  # Show the main interface
 
     def on_closing(self):
@@ -638,20 +677,20 @@ class LegAnimation:
         self.frames = self.load_png_frames(image_folder_path)
 
         # Create a label to display the image frame
-        self.label = tk.Label(self.canvas)
-        self.label.place(x=70, y=160)  # Place the label
+        self.label = tk.Label(self.canvas, bg="white", highlightthickness=0)
+        self.label.place(x=46, y=137)  # Place the label
 
         self.text_id1 = self.canvas.create_text(
-            190, 470,  # Coordinates (x, y)
-            text="0°",  # Text content
-            font=("Georgia", 14),  # Font and size
+            240, 470,  # Coordinates (x, y)
+            text="0.0°",  # Text content
+            font=("Inter", 13),  # Font and size
             fill="black"  # Text color
         )
 
         self.text_id2 = self.canvas.create_text(
-            470, 470,  # Coordinates (x, y)
+            490, 470,  # Coordinates (x, y)
             text="0.0",  # Text content
-            font=("Georgia", 14),  # Font and size
+            font=("Inter", 13),  # Font and size
             fill="black"  # Text color
         )
 
