@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox, PhotoImage, Button, Entry
+from tkinter import ttk, messagebox, PhotoImage, Button, Entry, filedialog
 from pathlib import Path
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -8,6 +8,10 @@ import serial
 import os
 import math
 import time
+import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter  # Importar la función para convertir números a letras de columna
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -165,12 +169,46 @@ class AppInterface0(AppBase):
         )
         self.settings_button.place(x=544, y=476)
 
+        self.select_bg_image = PhotoImage(file=relative_to_assets("SELECT_BG_IMAGE.png"))
+        self.select_folder_button = Button(
+            self.canvas,
+            image=self.select_bg_image,
+            command=self.select_output_folder,
+            relief="flat",
+            state="normal",
+            bg=self.used_color
+        )
+        self.select_folder_button.place(x=400, y=386)
+
+    def select_output_folder(self):
+        """Abre un diálogo para seleccionar la carpeta de salida."""
+        folder_selected = filedialog.askdirectory()
+        if folder_selected:
+            self.output_folder = Path(folder_selected)
+            self.patient_data["output_folder"] = self.output_folder  # Guardar la ruta en patient_data
+            messagebox.showinfo("Carpeta seleccionada", f"Los archivos se guardarán en: {self.output_folder}")
+
+    def get_all_entries(self):
+        return (
+            self.entry_00.get(),
+            self.entry_01.get(),
+            self.entry_02.get(),
+            self.combobox1.set("...")  # Sex
+        )
+
+    def reset_entries(self):
+        # Reset all entries to blank
+        self.entry_00.delete(0, tk.END)
+        self.entry_01.delete(0, tk.END)
+        self.entry_02.delete(0, tk.END)
+
     def save_and_next(self):
         """Guarda la información y cambia de interfaz."""
-        # self.patient_data["Nombre"] = self.entry_00.get()
-        # self.patient_data["Edad"] = self.entry_01.get()
-        # self.patient_data["Sexo"] = self.combobox1.get()
-        # self.patient_data["Actividad"] = self.combobox2.get()
+        self.patient_data["Nombre"] = self.entry_00.get()
+        self.patient_data["Edad"] = self.entry_01.get()
+        self.patient_data["Sexo"] = self.combobox1.get()
+        self.patient_data["Actividad"] = self.combobox2.get()
+        self.patient_data["Expediente"] = self.entry_02.get()  # Guardar el número de expediente
 
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
@@ -271,6 +309,16 @@ class AppInterface2(AppBase):
         self.is_connected = False
         self.active_animation = True
         self.blink_state = True
+        self.grados = 0
+        self.torque = 0
+        self.nivel_actual = None
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
         self.frames_path = Path(__file__).resolve().parent / "light_video"
         self.squares = []
         self.root = root
@@ -349,6 +397,7 @@ class AppInterface2(AppBase):
                                 rad = abs(float(values[0]))
                                 self.position = (rad * 180) / math.pi
                                 self.torque = abs(float(values[1]))
+                                self.grados = self.position
                                 if self.leg_animation:
                                     self.leg_animation.update_frame(self.position, self.torque)
                             except ValueError:
@@ -572,6 +621,13 @@ class AppInterface2(AppBase):
 
 
     def achieved_test(self, color):
+        nivel_actual = self.combobox.get()
+        if nivel_actual in self.datos:
+            self.datos[nivel_actual].append({
+                "Grados": self.grados,
+                "Torque": self.torque,
+                "Llegó": "Sí" if color == "#06D7A0" else "No"  # Dependiendo del color, sabes si llegó o no
+            })
         self.highlight(color)
         self.combobox.config(state="readonly")
         self.turn_off_motor()
@@ -614,7 +670,61 @@ class AppInterface2(AppBase):
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def save_boton(self):
-        messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+        try:
+            # Crear una lista para almacenar todos los datos
+            datos_finales = []
+
+            # Recorrer el diccionario y agregar los datos a la lista
+            for nivel, registros in self.datos.items():
+                for registro in registros:
+                    datos_finales.append({
+                        "Nivel": nivel,
+                        "Grados": registro["Grados"],
+                        "Torque": registro["Torque"],
+                        "Llegó": registro["Llegó"]
+                    })
+
+            # Obtener la ruta de salida y el número de expediente desde patient_data
+            expediente = self.patient_data.get("Expediente", "Sin expediente")
+            output_folder = self.patient_data.get("output_folder", Path.cwd())
+
+            if expediente and output_folder:
+                # Crear el nombre del archivo con el número de expediente
+                output_path = output_folder / f"{expediente}.xlsx"
+
+                # Crear un nuevo libro de Excel
+                wb = openpyxl.Workbook()
+
+                # Crear la hoja para el modo automático
+                ws_auto = wb.active
+                ws_auto.title = "Modo Automático"
+
+                # Escribir la tabla de información personal
+                self.write_patient_info(ws_auto)
+
+                # Escribir la tabla de resumen de pruebas de fuerza
+                self.write_test_summary(ws_auto, datos_finales)
+
+                # Crear una nueva hoja para el modo manual
+                ws_manual = wb.create_sheet("Modo Manual")
+
+                # Escribir la tabla de información personal en la hoja manual
+                self.write_patient_info(ws_manual)
+
+                # Guardar el archivo Excel
+                wb.save(output_path)
+
+                # Mostrar mensaje de éxito
+                messagebox.showinfo("Test Finalizado",
+                                    f"El registro y test ha concluido. Su archivo ha sido guardado como {output_path}.")
+            else:
+                messagebox.showwarning("Error",
+                                       "Por favor, ingrese un número de expediente válido y seleccione una carpeta de salida.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al guardar el archivo: {e}")
+
+        # Deshabilitar el botón de guardar y resetear la interfaz
         self.boton_save.config(state="disabled")
         self.user_input.config(state="disabled")
         self.squares[4].config(bg="#FFFFFF")
@@ -623,6 +733,76 @@ class AppInterface2(AppBase):
         self.squares[1].config(bg="#FFFFFF")
         self.squares[0].config(bg="#FFFFFF")
         self.achieved_levels[:] = [False] * len(self.achieved_levels)
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
+
+    def write_patient_info(self, ws):
+        """Escribe la información del paciente en la hoja de Excel."""
+        ws['A1'] = "Información Personal"
+        ws['A1'].font = Font(bold=True, size=14, color="FFFFFF")
+        ws['A1'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells('A1:E1')  # Combinar celdas para el header (ahora son 5 columnas)
+
+        # Subheaders de la tabla de información personal
+        ws['A2'] = "Nombre"
+        ws['B2'] = "Edad"
+        ws['C2'] = "Sexo"
+        ws['D2'] = "Actividad Física"
+        ws['E2'] = "Fecha"
+        for cell in ws['A2:E2'][0]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Datos de la tabla de información personal
+        ws['A3'] = self.patient_data.get("Nombre", "No registrado")
+        ws['B3'] = self.patient_data.get("Edad", "No registrado")
+        ws['C3'] = self.patient_data.get("Sexo", "No registrado")
+        ws['D3'] = self.patient_data.get("Actividad", "No registrado")
+        ws['E3'] = "Fecha de prueba"  # Puedes agregar un campo para la fecha si es necesario
+        for cell in ws['A3:E3'][0]:
+            cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    def write_test_summary(self, ws, datos_finales):
+        """Escribe el resumen de las pruebas de fuerza en la hoja de Excel."""
+        # Espacio entre las tablas
+        ws['A5'] = ""  # Espacio vacío
+
+        # Escribir la tabla de resumen de pruebas de fuerza
+        ws['A6'] = "Resumen de Pruebas de Fuerza"
+        ws['A6'].font = Font(bold=True, size=14, color="FFFFFF")
+        ws['A6'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells('A6:D6')  # Combinar celdas para el header
+
+        # Subheaders de la tabla de resumen de pruebas de fuerza
+        ws['A7'] = "Nivel"
+        ws['B7'] = "Grados"
+        ws['C7'] = "Torque"
+        ws['D7'] = "Llegó"
+        for cell in ws['A7:D7'][0]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Datos de la tabla de resumen de pruebas de fuerza
+        row_index = 8
+        for dato in datos_finales:
+            ws[f'A{row_index}'] = dato["Nivel"]
+            ws[f'B{row_index}'] = dato["Grados"]
+            ws[f'C{row_index}'] = dato["Torque"]
+            ws[f'D{row_index}'] = dato["Llegó"]
+            for cell in ws[f'A{row_index}:D{row_index}'][0]:
+                cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            row_index += 1
 
     def start_animation(self):
         self.level1 = self.combobox.get()
@@ -760,7 +940,18 @@ class AppInterface3(AppBase):
         self.is_connected = False
         self.active_animation = True
         self.blink_state = True
+        self.grados = 0
+        self.torque = 0
+        self.nivel_actual = None
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
         self.frames_path = Path(__file__).resolve().parent / "light_video"
+        self.app_interface = patient_data
         self.squares = []
         self.root = root
         self.dimension_x1 = "1000"
@@ -838,6 +1029,7 @@ class AppInterface3(AppBase):
                                 rad = abs(float(values[0]))
                                 self.position = (rad * 180) / math.pi
                                 self.torque = abs(float(values[1]))
+                                # self.grados = self.position
                                 if self.leg_animation:
                                     self.leg_animation.update_frame(self.position, self.torque)
                             except ValueError:
@@ -1050,6 +1242,13 @@ class AppInterface3(AppBase):
         self.achieved_levels = [False] * 5
 
     def achieved_test(self, color):
+        nivel_actual = self.combobox.get()
+        if nivel_actual in self.datos:
+            self.datos[nivel_actual].append({
+                "Grados": self.grados,
+                "Torque": self.torque,
+                "Llegó": "Sí" if color == "#06D7A0" else "No"  # Dependiendo del color, sabes si llegó o no
+            })
         self.highlight(color)
         self.combobox.config(state="readonly")
         self.turn_off_motor()
@@ -1092,7 +1291,61 @@ class AppInterface3(AppBase):
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def save_boton(self):
-        messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+        try:
+            # Crear una lista para almacenar todos los datos
+            datos_finales = []
+
+            # Recorrer el diccionario y agregar los datos a la lista
+            for nivel, registros in self.datos.items():
+                for registro in registros:
+                    datos_finales.append({
+                        "Nivel": nivel,
+                        "Grados": registro["Grados"],
+                        "Torque": registro["Torque"],
+                        "Llegó": registro["Llegó"]
+                    })
+
+            # Obtener la ruta de salida y el número de expediente desde patient_data
+            expediente = self.patient_data.get("Expediente", "Sin expediente")
+            output_folder = self.patient_data.get("output_folder", Path.cwd())
+
+            if expediente and output_folder:
+                # Crear el nombre del archivo con el número de expediente
+                output_path = output_folder / f"{expediente}.xlsx"
+
+                # Crear un nuevo libro de Excel
+                wb = openpyxl.Workbook()
+
+                # Crear la hoja para el modo manual
+                ws_manual = wb.active
+                ws_manual.title = "Modo Manual"
+
+                # Escribir la tabla de información personal
+                self.write_patient_info(ws_manual)
+
+                # Escribir la tabla de resumen de pruebas de fuerza
+                self.write_test_summary(ws_manual, datos_finales)
+
+                # Crear una nueva hoja para el modo automático
+                ws_auto = wb.create_sheet("Modo Automático")
+
+                # Escribir la tabla de información personal en la hoja automático
+                self.write_patient_info(ws_auto)
+
+                # Guardar el archivo Excel
+                wb.save(output_path)
+
+                # Mostrar mensaje de éxito
+                messagebox.showinfo("Test Finalizado",
+                                    f"El registro y test ha concluido. Su archivo ha sido guardado como {output_path}.")
+            else:
+                messagebox.showwarning("Error",
+                                       "Por favor, ingrese un número de expediente válido y seleccione una carpeta de salida.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al guardar el archivo: {e}")
+
+        # Deshabilitar el botón de guardar y resetear la interfaz
         self.boton_save.config(state="disabled")
         self.user_input.config(state="disabled")
         self.squares[4].config(bg="#FFFFFF")
@@ -1101,6 +1354,76 @@ class AppInterface3(AppBase):
         self.squares[1].config(bg="#FFFFFF")
         self.squares[0].config(bg="#FFFFFF")
         self.achieved_levels[:] = [False] * len(self.achieved_levels)
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
+
+    def write_patient_info(self, ws):
+        """Escribe la información del paciente en la hoja de Excel."""
+        ws['A1'] = "Información Personal"
+        ws['A1'].font = Font(bold=True, size=14, color="FFFFFF")
+        ws['A1'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells('A1:E1')  # Combinar celdas para el header (ahora son 5 columnas)
+
+        # Subheaders de la tabla de información personal
+        ws['A2'] = "Nombre"
+        ws['B2'] = "Edad"
+        ws['C2'] = "Sexo"
+        ws['D2'] = "Actividad Física"
+        ws['E2'] = "Fecha"
+        for cell in ws['A2:E2'][0]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Datos de la tabla de información personal
+        ws['A3'] = self.patient_data.get("Nombre", "No registrado")
+        ws['B3'] = self.patient_data.get("Edad", "No registrado")
+        ws['C3'] = self.patient_data.get("Sexo", "No registrado")
+        ws['D3'] = self.patient_data.get("Actividad", "No registrado")
+        ws['E3'] = "Fecha de prueba"  # Puedes agregar un campo para la fecha si es necesario
+        for cell in ws['A3:E3'][0]:
+            cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    def write_test_summary(self, ws, datos_finales):
+        """Escribe el resumen de las pruebas de fuerza en la hoja de Excel."""
+        # Espacio entre las tablas
+        ws['A5'] = ""  # Espacio vacío
+
+        # Escribir la tabla de resumen de pruebas de fuerza
+        ws['A6'] = "Resumen de Pruebas de Fuerza"
+        ws['A6'].font = Font(bold=True, size=14, color="FFFFFF")
+        ws['A6'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells('A6:D6')  # Combinar celdas para el header
+
+        # Subheaders de la tabla de resumen de pruebas de fuerza
+        ws['A7'] = "Nivel"
+        ws['B7'] = "Grados"
+        ws['C7'] = "Torque"
+        ws['D7'] = "Llegó"
+        for cell in ws['A7:D7'][0]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Datos de la tabla de resumen de pruebas de fuerza
+        row_index = 8
+        for dato in datos_finales:
+            ws[f'A{row_index}'] = dato["Nivel"]
+            ws[f'B{row_index}'] = dato["Grados"]
+            ws[f'C{row_index}'] = dato["Torque"]
+            ws[f'D{row_index}'] = dato["Llegó"]
+            for cell in ws[f'A{row_index}:D{row_index}'][0]:
+                cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            row_index += 1
 
     def start_animation(self):
         self.level1 = self.combobox.get()
