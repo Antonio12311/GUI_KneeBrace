@@ -187,28 +187,39 @@ class AppInterface1:
 
     def init_widgets(self):
         # Title
-        self.canvas.create_text(145, 25, anchor="nw", text="Seleccione modo de estudio", fill="#000000", font=("Inter", 30))
+        self.canvas.create_text(70, 25, anchor="nw", text="Seleccione modo de estudio", fill="#000000", font=("Inter", 30))
 
         # Next page button
-        self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
-        self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
+        self.canvas.create_text(122, 370, anchor="nw", text="Modo manual", fill="#000000", font=("Inter", 13))
+        self.manual_bg_image = PhotoImage(file=relative_to_assets("MANUAL_BTN_BG.png"))
+        self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
                                        command=self.switch_to_interface1, state="normal", relief="flat",
                                        borderwidth=0, bg=self.used_color,)
-        self.switch_button.place(x=224.0, y=476.0)
+        self.manual_button.place(x=97.0, y=198.0)
+
+        self.canvas.create_text(405, 370, anchor="nw", text="Modo automático", fill="#000000", font=("Inter", 13))
+        self.automatic_bg_image = PhotoImage(file=relative_to_assets("AUTOMATIC_BTN.png"))
+        self.automatic_button = tk.Button(self.canvas, image=self.automatic_bg_image,
+                                       command=self.switch_to_interface2, state="normal", relief="flat",
+                                       borderwidth=0, bg=self.used_color,)
+        self.automatic_button.place(x=381.0, y=183.0)
+
+        self.go_back_bg_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN0.png"))
+        self.go_back_button = tk.Button(self.canvas, image=self.go_back_bg_image,
+                                       command=self.switch_to_interface1, state="normal", relief="flat",
+                                       borderwidth=0, bg=self.used_color,)
+        self.go_back_button.place(x=39.0, y=474.0)
 
     def error_message(self):
         messagebox.showwarning("Error", "Asegurese de llenar todos los espacios")
 
     def switch_to_interface1(self):
-        """
-        if self.entry_00 == "" or self.entry_01 == "" or self.entry_02 == "" or self.combobox1.get() == "...":
-            self.error_message()
-
-        else:"""
         self.canvas.place_forget()  # Hide the current interface
-        # AppInterface2(self.root, self)  # Show the second interface
         self.register_interface.show()  # Show the main interface
 
+    def switch_to_interface2(self):
+        self.canvas.place_forget()
+        AppInterface2(self.root, self)
 
     def show(self):
         self.canvas.place(x=0, y=0)  # Show the current interface
