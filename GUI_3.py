@@ -853,6 +853,10 @@ class AppInterface3(AppBase):
         self.dimension_x1 = "1000"
         self.dimension_y1 = "720"
 
+        self.send_value_running = False
+        self.send_value_thread = None
+        self.max_torque_reached = False
+
         self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
         self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
         x = (self.screen_width // 2) - (int(self.dimension_x1) // 2)  # Calcula la posición X
@@ -989,14 +993,99 @@ class AppInterface3(AppBase):
 
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
+            messagebox.showinfo("Estudio", "Se ha comenzado a aplicar fuerza!")
             self.animation_on_write_serial()
             self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
         else:
             self.animation_off_write_serial()
             self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
-        if self.level.startswith("Nivel "):
-            level_num = int(self.level.split(" ")[1])
-            self.squares[level_num].config(bg="#FFFFFF")
+
+            # Stop the send_value loop
+            self.send_value_running = False
+            if self.send_value_thread is not None:
+                self.send_value_thread.join()  # Wait for the thread to finish
+                self.send_value_thread = None
+
+            # Reset the squares and achieved levels if necessary
+            if self.level.startswith("Nivel "):
+                level_num = int(self.level.split(" ")[1])
+                self.squares[level_num - 1].config(bg="#FFFFFF")
+                self.achieved_levels[level_num - 1] = False
+
+    def send_value(self):
+        cadena = str(self.combobox.get())
+        nivel = int(cadena.split()[1])
+        divided_value = nivel / 4
+        cumulative_value = 0
+
+        while self.send_value_running and cumulative_value < nivel:
+            cumulative_value += divided_value
+            if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                try:
+                    self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                    print(f"Sent: {cumulative_value}")  # Debug print
+                except Exception as e:
+                    print(f"Error writing to serial port: {e}")
+                finally:
+                    self.arduino_lock.release()  # Release the lock
+            else:
+                print("Serial port is not open.")
+                break
+
+            time.sleep(2)  # Wait for 2 seconds before the next iteration
+
+        # When max torque is reached
+        if cumulative_value >= nivel:
+            self.max_torque_reached = True
+            messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+
+    def animation_on_write_serial(self):
+        self.combobox.config(state="disabled")
+        self.start_animation()
+        time.sleep(0.10)
+        self.turn_on_motor()
+        time.sleep(0.10)
+
+        # Start the send_value function in a separate thread
+        self.send_value_running = True
+        self.max_torque_reached = False
+        self.send_value_thread = threading.Thread(target=self.send_value)
+        self.send_value_thread.start()
+
+    def animation_off_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.stop_animation()
+        time.sleep(0.05)
+        self.turn_off_motor()
+        time.sleep(0.05)
+
+    def turn_on_motor(self):
+        if self.ser is not None:
+            cadena = "998\n"
+            self.arduino_lock.acquire()
+            time.sleep(0.05)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.05)
+            self.arduino_lock.release()
+
+    def turn_off_motor(self):
+        if self.ser is not None:
+            cadena = "999\n"
+            self.arduino_lock.acquire()
+            time.sleep(0.05)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.05)
+            self.arduino_lock.release()
+
+    def origin_motor(self):
+        if self.ser is not None:
+            cadena = "997\n"
+            self.arduino_lock.acquire()
+            time.sleep(0.05)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.05)
+            self.arduino_lock.release()
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -1066,13 +1155,18 @@ class AppInterface3(AppBase):
         self.achieved_button = Button(self.canvas, image=self.achieved_bg_image,
                                       command=lambda: self.achieved_test("#06D7A0"),
                                       relief="flat", bg=self.used_color, state="disabled")
-        self.achieved_button.place(x=730.0, y=200.0)
+        self.achieved_button.place(x=730.0, y=240.0)
 
         self.failed_bg_image = PhotoImage(file=relative_to_assets("FAILED_BTN_BG.png"))
         self.failed_button = Button(self.canvas, image=self.failed_bg_image,
                                     command=lambda: self.failed_test("#F04770"),
                                     relief="flat", bg=self.used_color, state="disabled")
-        self.failed_button.place(x=730.0, y=300.0)
+        self.failed_button.place(x=730.0, y=325.0)
+
+        self.origin_bg_image = PhotoImage(file=relative_to_assets("SET_ORIGIN_BTN_BG.png"))
+        self.origin_btn = tk.Button(self.canvas, image=self.origin_bg_image, command=self.origin_motor,
+                                    relief="flat", borderwidth=0, bg=self.used_color)
+        self.origin_btn.place(x=735.0, y=160.0)
 
         self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
         self.canvas.create_image(40, 134, image=self.leg_bg_image, anchor="nw")
@@ -1236,49 +1330,6 @@ class AppInterface3(AppBase):
                 self.squares[self.level_num - 1].config(bg=color)
                 self.achieved_levels[self.level_num - 1] = True
                 self.user_input.config(state="normal")
-
-    def send_value(self):
-        cadena = str(self.combobox.get())
-        # Extract the number using split()
-        nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
-        self.arduino_lock.acquire()
-        time.sleep(0.05)
-        self.ser.write((nivel + "\n").encode('ascii'))  # Send only the number
-        time.sleep(0.05)
-        self.arduino_lock.release()
-
-    def animation_on_write_serial(self):
-        self.combobox.config(state="disabled")
-        self.start_animation()
-        time.sleep(0.10)
-        self.turn_on_motor()
-        time.sleep(0.10)
-        self.send_value()
-
-    def animation_off_write_serial(self):
-        self.combobox.config(state="readonly")
-        self.stop_animation()
-        time.sleep(0.05)
-        self.turn_off_motor()
-        time.sleep(0.05)
-
-    def turn_on_motor(self):
-        if self.ser is not None:
-            cadena = "998\n"
-            self.arduino_lock.acquire()
-            time.sleep(0.05)
-            self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.05)
-            self.arduino_lock.release()
-
-    def turn_off_motor(self):
-        if self.ser is not None:
-            cadena = "999\n"
-            self.arduino_lock.acquire()
-            time.sleep(0.05)
-            self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.05)
-            self.arduino_lock.release()
 
     def init_widgets(self):
         # Mostrar información del paciente
