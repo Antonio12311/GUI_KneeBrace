@@ -237,13 +237,13 @@ class AppInterface1(AppBase):
         self.automatic_bg_image = PhotoImage(file=relative_to_assets("AUTOMATIC_BTN.png"))
         self.automatic_button = tk.Button(self.canvas, image=self.automatic_bg_image,
                                           command=lambda: self.controller.switch_frame(AppInterface2), state="normal",
-                                          relief="flat", borderwidth=0, bg=self.used_color,)
+                                          relief="flat", borderwidth=0, bg=self.used_color)
         self.automatic_button.place(x=381.0, y=183.0)
 
         self.go_back_bg_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
         self.go_back_button = tk.Button(self.canvas, image=self.go_back_bg_image,
                                         command=lambda: self.controller.switch_frame(AppInterface0), state="normal",
-                                        relief="flat", borderwidth=0, bg=self.used_color,)
+                                        relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=520.0, y=474.0)
 
 
@@ -251,26 +251,26 @@ class AppInterface1(AppBase):
 class AppInterface2(AppBase):
     def __init__(self, root, controller, patient_data):
         super().__init__(root, controller, patient_data)
-        self.updateMeterLine = None
-        self.MeterWidget = None
+        self.position = None
         self.messagebox = None
-        self.stop_button_widget = None
-        self.start_button_widget = None
-        self.send_data = None
         self.level = None
         self.value = None
         self.text = None
         self.combobox = None
-        self.entry_bg_1 = None
-        self.entry_1 = None
         self.connect_button_image = None
         self.leg_animation = None
         self.ser = None
-        self.type_input = None
+        self.send_value_running = False
+        self.send_value_thread = None
+        self.max_torque_reached = False
         self.stop_threads = False
         self.is_connected = False
+        self.message_shown = False
         self.active_animation = True
         self.blink_state = True
+        self.time_left = 0
+        self.max_angle = 0
+        self.running = False
         self.frames_path = Path(__file__).resolve().parent / "light_video"
         self.squares = []
         self.root = root
@@ -394,11 +394,6 @@ class AppInterface2(AppBase):
                     # Starting the reading thread
                     reading_thread = threading.Thread(target=self.read_serial_port, args=self.ser)
                     reading_thread.start()
-
-                    # Starting the sending thread
-                    sending_thread = threading.Thread(target=self.send_data, args=self.ser)
-                    sending_thread.start()
-
         else:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
@@ -415,16 +410,149 @@ class AppInterface2(AppBase):
             self.is_connected = False
             self.stop_threads = False
 
+    def start_timer(self):
+        if not self.running:
+            self.time_left = 10  # Set the countdown time in seconds
+            self.running = True
+            self.message_shown = False  # Reset the flag when the timer starts
+            self.update_timer()
+
+    def stop_timer(self):
+        if self.running:
+            self.time_left = 0  # Set the countdown time in seconds
+            self.running = False
+
+    def update_timer(self):
+        if not self.running:
+            return
+
+        if self.time_left > 0:
+            minutes, seconds = divmod(self.time_left, 60)
+            self.label_timer.config(text=f"{minutes:02}:{seconds:02}")
+            self.time_left -= 1
+
+            if self.position >= self.max_angle and not self.message_shown:
+                self.running = False
+                self.achieved_test("#06D7A0")
+                self.label_timer.config(text="00:00")
+                messagebox.showinfo("Timer", "Ha alcanzado la posición deseada!")
+                self.message_shown = True  # Set the flag to True after showing the message
+
+            if self.running:
+                self.root.after(1000, self.update_timer)
+
+        elif self.time_left == 0 and self.position <= self.max_angle and not self.message_shown:
+            self.running = False
+            self.failed_test("#F04770")
+            self.label_timer.config(text="00:00")
+            messagebox.showinfo("Timer", "No ha alcanzado la posición deseada!")
+            self.message_shown = True
+
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
+            messagebox.showinfo("Estudio", "Se ha comenzado a aplicar fuerza!")
             self.animation_on_write_serial()
             self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
         else:
             self.animation_off_write_serial()
+            self.stop_timer()
+            self.label_timer.config(text="00:00")
             self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
-        if self.level.startswith("Nivel "):
-            level_num = int(self.level.split(" ")[1])
-            self.squares[level_num].config(bg="#FFFFFF")
+
+            # Stop the send_value loop
+            self.send_value_running = False
+            if self.send_value_thread is not None:
+                self.send_value_thread.join()  # Wait for the thread to finish
+                self.send_value_thread = None
+
+            # Reset the squares and achieved levels if necessary
+            if self.level.startswith("Nivel "):
+                level_num = int(self.level.split(" ")[1])
+                self.squares[level_num - 1].config(bg="#FFFFFF")
+                self.achieved_levels[level_num - 1] = False
+
+    def send_value(self):
+        cadena = str(self.combobox.get())
+        nivel = int(cadena.split()[1])
+        divided_value = nivel / 4
+        cumulative_value = 0
+
+        while self.send_value_running and cumulative_value < nivel:
+            cumulative_value += divided_value
+            if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                try:
+                    self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                    print(f"Sent: {cumulative_value}")  # Debug print
+                except Exception as e:
+                    print(f"Error writing to serial port: {e}")
+                finally:
+                    self.arduino_lock.release()  # Release the lock
+            else:
+                print("Serial port is not open.")
+                break
+
+            time.sleep(2)  # Wait for 2 seconds before the next iteration
+
+        # When max torque is reached
+        if cumulative_value >= nivel:
+            self.max_torque_reached = True
+            messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+            self.start_timer()  # Start the countdown timer
+
+    def animation_on_write_serial(self):
+        self.combobox.config(state="disabled")
+        self.start_animation()
+        time.sleep(0.10)
+        self.turn_on_motor()
+        time.sleep(0.10)
+
+        # Start the send_value function in a separate thread
+        self.send_value_running = True
+        self.max_torque_reached = False
+        self.send_value_thread = threading.Thread(target=self.send_value)
+        self.send_value_thread.start()
+
+    def animation_off_write_serial(self):
+        self.combobox.config(state="readonly")
+        self.stop_animation()
+        time.sleep(0.05)
+        self.turn_off_motor()
+        time.sleep(0.05)
+
+    def turn_on_motor(self):
+        if self.ser is not None and self.ser.is_open:
+            cadena = "998\n"
+            self.arduino_lock.acquire()
+            try:
+                self.ser.write(cadena.encode('ascii'))
+                print("Motor turned on.")
+            except Exception as e:
+                print(f"Error turning on motor: {e}")
+            finally:
+                self.arduino_lock.release()
+
+    def turn_off_motor(self):
+        if self.ser is not None and self.ser.is_open:
+            cadena = "999\n"
+            self.arduino_lock.acquire()
+            try:
+                self.ser.write(cadena.encode('ascii'))
+                print("Motor turned off.")
+            except Exception as e:
+                print(f"Error turning off motor: {e}")
+            finally:
+                self.arduino_lock.release()
+
+    def origin_motor(self):
+        if self.ser is not None:
+            cadena = "997\n"
+            self.arduino_lock.acquire()
+            time.sleep(0.05)
+            self.ser.write(cadena.encode('ascii'))
+            time.sleep(0.05)
+            self.arduino_lock.release()
+
 
     def validate_input(self):
         return self.text.isdigit() or self.text == ""
@@ -452,9 +580,6 @@ class AppInterface2(AppBase):
                 return False
         return True
 
-    def soon_message(self):
-        messagebox.showinfo("PROXIMAMENTE", "Menú, pestañas de registro y mejora visual en desarrollo")
-
     def create_combo_widget(self):
         # Title
         self.canvas.create_text(350, 10, anchor="nw", text="Estudio automático", fill=self.text_color, font=("Inter", 30))
@@ -471,9 +596,8 @@ class AppInterface2(AppBase):
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
-        self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
-                                             command=self.apply_combox_changes, relief="flat", borderwidth=5,
-                                             bg=self.used_color)
+        self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,command=self.apply_combox_changes,
+                                             relief="flat", borderwidth=0, bg=self.used_color)
         self.apply_button_widget.place(x=350, y=640)
         self.apply_button_widget.config(state="disabled")
 
@@ -493,15 +617,23 @@ class AppInterface2(AppBase):
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
         self.canvas.create_image(709, 135, image=self.indicator1_bg_image, anchor="nw")
 
-        self.canvas.create_text(790, 180, text="Ángulo máx.", font=("Inter", 13), fill=self.text_color)
-        self.canvas.create_text(790, 300, text="Ángulo min.", font=("Inter", 13), fill=self.text_color)
-        self.max_angle_text = self.canvas.create_text(780, 220, text="0.0 °", font=("Inter", 13), fill=self.text_color)
-        self.min_angle_text = self.canvas.create_text(780, 330, text="0.0 °", font=("Inter", 13), fill=self.text_color)
+        self.origin_bg_image = PhotoImage(file=relative_to_assets("SET_ORIGIN_BTN_BG.png"))
+        self.origin_btn = tk.Button(self.canvas, image=self.origin_bg_image, command=self.origin_motor,
+                                    relief="flat", borderwidth=0, bg=self.used_color)
+        self.origin_btn.place(x=735.0, y=160.0)
 
-        self.save_max_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_max_angle)
-        self.save_max_angle.place(x=850.0, y=210.0, width=100.0, height=20.0)
-        self.save_min_angle = ttk.Button(self.canvas, text="Guardar", command=self.save_min_angle)
-        self.save_min_angle.place(x=850.0, y=320.0, width=100.0, height=20.0)
+        self.max_angle_text=self.canvas.create_text(810, 270, text="Ángulo máx.:  0.0 °", font=("Inter", 12),
+                                                    fill=self.text_color)
+
+        self.save_angle_bg = PhotoImage(file=relative_to_assets("SAVE_ANGLE_BTN0_BG.png"))
+
+        self.max_angle_btn = tk.Button(self.canvas, image=self.save_angle_bg, command=self.save_max_angle,
+                                            relief="flat", borderwidth=0, bg=self.used_color)
+        self.max_angle_btn.place(x=735.0, y=284.0)
+        self.max_angle_btn.config(state="disabled")
+
+        self.label_timer = tk.Label(root, text="00:00", font=("Inter", 12),bg=self.used_color)
+        self.label_timer.place(x=740.0, y=385.0)
 
         self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
         self.canvas.create_image(40, 134, image=self.leg_bg_image, anchor="nw")
@@ -560,15 +692,12 @@ class AppInterface2(AppBase):
 
         self.achieved_levels = [False] * 5
 
-
-
-    def save_min_angle(self):
-        self.canvas.itemconfig(self.min_angle_text, text=f"{self.position:.1f} °")
-        self.max_angle = self.position
-
     def save_max_angle(self):
-        self.canvas.itemconfig(self.max_angle_text, text=f"{self.position:.1f} °")
-        self.min_angle = self.position
+        if self.position is not None:
+            self.canvas.itemconfig(self.max_angle_text, text=f"Ángulo máx.:  {self.position:.1f} °")
+            self.max_angle = self.position
+        else:
+            messagebox.showinfo("Error", "No se detecta posición, verifique el sistema")
 
 
     def achieved_test(self, color):
@@ -604,11 +733,12 @@ class AppInterface2(AppBase):
             if not self.check_last_lvl(self.level_num):
                 return
 
-            self.mensaje_label1.config(text="Cambios aplicados", fg="#5BFF2F")
-            self.mensaje_label2.config(text="correctamente", fg="#5BFF2F")
+            self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
+            self.mensaje_label2.config(text="correctamente", fg="#00072D")
             self.user_input.config(state="disabled")
-            self.combobox.config(state="disabled")
             self.boton_toggle.config(state="normal")
+            self.combobox.config(state="disabled")
+            self.max_angle_btn.config(state="normal")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
@@ -671,49 +801,6 @@ class AppInterface2(AppBase):
                 self.squares[self.level_num - 1].config(bg=color)
                 self.achieved_levels[self.level_num - 1] = True
                 self.user_input.config(state="normal")
-
-    def send_value(self):
-        cadena = str(self.combobox.get())
-        # Extract the number using split()
-        nivel = cadena.split()[1]  # Splits the string and takes the second part (index 1)
-        self.arduino_lock.acquire()
-        time.sleep(0.05)
-        self.ser.write((nivel + "\n").encode('ascii'))  # Send only the number
-        time.sleep(0.05)
-        self.arduino_lock.release()
-
-    def animation_on_write_serial(self):
-        self.combobox.config(state="disabled")
-        self.start_animation()
-        time.sleep(0.10)
-        self.turn_on_motor()
-        time.sleep(0.10)
-        self.send_value()
-
-    def animation_off_write_serial(self):
-        self.combobox.config(state="readonly")
-        self.stop_animation()
-        time.sleep(0.05)
-        self.turn_off_motor()
-        time.sleep(0.05)
-
-    def turn_on_motor(self):
-        if self.ser is not None:
-            cadena = "998\n"
-            self.arduino_lock.acquire()
-            time.sleep(0.05)
-            self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.05)
-            self.arduino_lock.release()
-
-    def turn_off_motor(self):
-        if self.ser is not None:
-            cadena = "999\n"
-            self.arduino_lock.acquire()
-            time.sleep(0.05)
-            self.ser.write(cadena.encode('ascii'))
-            time.sleep(0.05)
-            self.arduino_lock.release()
 
     def init_widgets(self):
         # Mostrar información del paciente
@@ -884,10 +971,6 @@ class AppInterface3(AppBase):
                     reading_thread = threading.Thread(target=self.read_serial_port, args=self.ser)
                     reading_thread.start()
 
-                    # Starting the sending thread
-                    sending_thread = threading.Thread(target=self.send_data, args=self.ser)
-                    sending_thread.start()
-
         else:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
@@ -958,7 +1041,7 @@ class AppInterface3(AppBase):
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
-                                             command=self.apply_combox_changes, relief="flat", borderwidth=5,
+                                             command=self.apply_combox_changes, relief="flat", borderwidth=0,
                                              bg=self.used_color)
         self.apply_button_widget.place(x=350, y=640)
         self.apply_button_widget.config(state="disabled")
@@ -990,7 +1073,6 @@ class AppInterface3(AppBase):
                                     command=lambda: self.failed_test("#F04770"),
                                     relief="flat", bg=self.used_color, state="disabled")
         self.failed_button.place(x=730.0, y=300.0)
-
 
         self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
         self.canvas.create_image(40, 134, image=self.leg_bg_image, anchor="nw")
@@ -1034,6 +1116,7 @@ class AppInterface3(AppBase):
 
         self.boton_toggle = tk.Button(
             self.canvas,
+            image=self.imagen_iniciar,
             text="Iniciar",
             font=("Inter", 16),
             command=self.toggle_boton,
@@ -1041,7 +1124,7 @@ class AppInterface3(AppBase):
             relief="flat",
             borderwidth=0,
             bg=self.used_color,
-            image=self.imagen_iniciar)
+            )
         self.boton_toggle.place(x=734, y=410)
         self.boton_toggle.config(state="disabled")
 
@@ -1218,6 +1301,7 @@ class AppInterface3(AppBase):
         self.root.destroy()
 
 
+# --------------------------- Imagen de pierna --------------------------- #
 class LegAnimation:
     def __init__(self, canvas, image_folder_path):
         self.canvas = canvas
