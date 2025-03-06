@@ -1643,3 +1643,5 @@ if __name__ == "__main__":
     controller = Controller(root)  # Create the controller
     controller.switch_frame(AppInterface0)  # Start with AppInterface0
     root.mainloop()
+
+#ñoto
