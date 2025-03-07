@@ -91,7 +91,7 @@ class AppInterface1:
 
         # Sex
         self.sex_bg_image = PhotoImage(file=relative_to_assets("SEX_ENTRY_BG.png"))
-        self.canvas.create_image(327, 237, image=self.age_bg_image, anchor="nw")
+        self.canvas.create_image(327, 237, image=self.sex_bg_image, anchor="nw")
         genders = ["Masculino", "Femenino"]
         self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Inter", 12))
         self.combobox1.config(state="readonly")
@@ -120,20 +120,24 @@ class AppInterface1:
 
         # Settings page button
         self.settings_bg_image = PhotoImage(file=relative_to_assets("COG_BG.png"))
-        self.settings_button = Button(
+        self.settings_button = tk.Button(
             self.canvas,
             image=self.settings_bg_image,
             relief="flat",
+            state="normal",
+            borderwidth=0,
             bg=self.used_color
         )
         self.settings_button.place(x=544, y=476)
 
         # Botón para seleccionar carpeta de salida
+        self.select_bg_image = PhotoImage(file=relative_to_assets("SELECT_BG_IMAGE.png"))
         self.select_folder_button = Button(
             self.canvas,
-            text="Seleccionar Carpeta",
+            image=self.select_bg_image,
             command=self.select_output_folder,
             relief="flat",
+            state="normal",
             bg=self.used_color
         )
         self.select_folder_button.place(x=400, y=386)

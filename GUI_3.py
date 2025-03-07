@@ -1539,23 +1539,22 @@ class AppInterface3(AppBase):
                 # Crear la gráfica de barras
                 chart = BarChart()
                 chart.title = "Grados por Nivel"
-                chart.x_axis.title = "Nivel"
-                chart.y_axis.title = "Grados"
+                chart.x_axis.title = "Nivel"  # Eje X: Niveles
+                chart.y_axis.title = "Grados"  # Eje Y: Grados
 
                 # Referencias para los datos de la gráfica
                 # Suponiendo que la tabla de resumen comienza en la fila 7 (A7:D7 es el header)
-                data = Reference(ws_manual, min_col=2, min_row=7, max_row=6 + len(datos_finales),
+                data = Reference(ws_manual, min_col=2, min_row=8, max_row=7 + len(datos_finales),
                                  max_col=2)  # Columna B (Grados)
-                categories = Reference(ws_manual, min_col=1, min_row=7,
-                                       max_row=6 + len(datos_finales))  # Columna A (Nivel)
+                categories = Reference(ws_manual, min_col=1, min_row=8,
+                                       max_row=7 + len(datos_finales))  # Columna A (Nivel)
 
                 # Agregar los datos a la gráfica
                 chart.add_data(data, titles_from_data=True)
                 chart.set_categories(categories)
 
                 # Configurar las etiquetas de datos (valores arriba de las barras)
-                chart.dLbls = DataLabelList()  # Crear un objeto DataLabelList
-                chart.dLbls.showVal = True  # Mostrar los valores
+                chart.dLbls = None  # Deshabilitar las etiquetas de datos
 
                 # Agregar la gráfica a la hoja
                 ws_manual.add_chart(chart, "F7")  # Colocar la gráfica al lado de la tabla
