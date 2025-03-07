@@ -153,6 +153,8 @@ class AppInterface0(AppBase):
         # Date
         self.date_bg_image = PhotoImage(file=relative_to_assets("DATE_ENTRY_BG.png"))
         self.canvas.create_image(105, 376, image=self.date_bg_image, anchor="nw")
+        self.entry_05 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, font=("Inter", 13))
+        self.entry_05.place(x=140.0, y=396.0, width=120.0, height=20.0)
 
         # Next page button
         self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
@@ -211,6 +213,7 @@ class AppInterface0(AppBase):
         self.patient_data["Sexo"] = self.combobox1.get()
         self.patient_data["Actividad"] = self.combobox2.get()
         self.patient_data["Expediente"] = self.entry_02.get()
+        self.patient_data["Fecha de prueba"] = self.entry_05.get()
 
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
@@ -808,6 +811,23 @@ class AppInterface2(AppBase):
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
+
+    def auto_size_columns(ws):
+        """
+        Ajusta automáticamente el ancho de las columnas en una hoja de Excel.
+        """
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter  # Obtener la letra de la columna
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2) * 1.2  # Ajustar el ancho con un pequeño margen
+            ws.column_dimensions[column].width = adjusted_width
+
     def save_boton(self):
         try:
             # Crear una lista para almacenar todos los datos
@@ -831,12 +851,22 @@ class AppInterface2(AppBase):
                 # Crear el nombre del archivo con el número de expediente
                 output_path = output_folder / f"{expediente}.xlsx"
 
-                # Crear un nuevo libro de Excel
-                wb = openpyxl.Workbook()
-
-                # Crear la hoja para el modo automático
-                ws_auto = wb.active
-                ws_auto.title = "Modo Automático"
+                # Verificar si el archivo ya existe
+                if output_path.exists():
+                    # Abrir el archivo existente
+                    wb = openpyxl.load_workbook(output_path)
+                    # Verificar si ya existe una hoja llamada "Modo Automático"
+                    if "Modo Automático" in wb.sheetnames:
+                        # Si existe, eliminarla para evitar duplicados
+                        wb.remove(wb["Modo Automático"])
+                    # Crear una nueva hoja para el modo automático
+                    ws_auto = wb.create_sheet("Modo Automático")
+                else:
+                    # Si el archivo no existe, crear uno nuevo
+                    wb = openpyxl.Workbook()
+                    # Crear la hoja para el modo automático
+                    ws_auto = wb.active
+                    ws_auto.title = "Modo Automático"
 
                 # Escribir la tabla de información personal
                 self.write_patient_info(ws_auto)
@@ -844,11 +874,27 @@ class AppInterface2(AppBase):
                 # Escribir la tabla de resumen de pruebas de fuerza
                 self.write_test_summary(ws_auto, datos_finales)
 
-                # Crear una nueva hoja para el modo manual
-                ws_manual = wb.create_sheet("Modo Manual")
+                # Crear la gráfica de barras
+                chart = BarChart()
+                chart.title = "Grados por Nivel"
+                chart.x_axis.title = "Nivel"  # Eje X: Niveles
+                chart.y_axis.title = "Grados"  # Eje Y: Grados
 
-                # Escribir la tabla de información personal en la hoja manual
-                self.write_patient_info(ws_manual)
+                # Referencias para los datos de la gráfica
+                data = Reference(ws_auto, min_col=2, min_row=8,
+                                 max_row=8 + len(datos_finales) - 1)  # Columna B (Grados)
+                categories = Reference(ws_auto, min_col=1, min_row=8,
+                                       max_row=8 + len(datos_finales) - 1)  # Columna A (Nivel)
+
+                # Agregar los datos a la gráfica
+                chart.add_data(data, titles_from_data=False)  # titles_from_data=False para evitar usar B8 como título
+                chart.set_categories(categories)
+
+                # Configurar las etiquetas de datos (valores arriba de las barras)
+                chart.dLbls = None  # Deshabilitar las etiquetas de datos
+
+                # Agregar la gráfica a la hoja
+                ws_auto.add_chart(chart, "F7")  # Colocar la gráfica al lado de la tabla
 
                 # Guardar el archivo Excel
                 wb.save(output_path)
@@ -886,15 +932,16 @@ class AppInterface2(AppBase):
         ws['A1'].font = Font(bold=True, size=14, color="FFFFFF")
         ws['A1'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
         ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
-        ws.merge_cells('A1:E1')  # Combinar celdas para el header (ahora son 5 columnas)
+        ws.merge_cells('A1:F1')  # Combinar celdas para el header (ahora son 5 columnas)
 
         # Subheaders de la tabla de información personal
         ws['A2'] = "Nombre"
         ws['B2'] = "Edad"
         ws['C2'] = "Sexo"
         ws['D2'] = "Actividad Física"
-        ws['E2'] = "Fecha"
-        for cell in ws['A2:E2'][0]:
+        ws['E2'] = "Fecha de prueba"
+        ws['F2'] = "Ángulo máximo de prueba"
+        for cell in ws['A2:F2'][0]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
             cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -904,8 +951,9 @@ class AppInterface2(AppBase):
         ws['B3'] = self.patient_data.get("Edad", "No registrado")
         ws['C3'] = self.patient_data.get("Sexo", "No registrado")
         ws['D3'] = self.patient_data.get("Actividad", "No registrado")
-        ws['E3'] = "Fecha de prueba"  # Puedes agregar un campo para la fecha si es necesario
-        for cell in ws['A3:E3'][0]:
+        ws['E3'] = self.patient_data.get("Fecha de prueba", "No registrado")  # Puedes agregar un campo para la fecha si es necesario
+        ws['F3'] = self.max_angle
+        for cell in ws['A3:F3'][0]:
             cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
@@ -1543,14 +1591,14 @@ class AppInterface3(AppBase):
                 chart.y_axis.title = "Grados"  # Eje Y: Grados
 
                 # Referencias para los datos de la gráfica
-                # Suponiendo que la tabla de resumen comienza en la fila 7 (A7:D7 es el header)
-                data = Reference(ws_manual, min_col=2, min_row=8, max_row=7 + len(datos_finales),
-                                 max_col=2)  # Columna B (Grados)
+                # Asegúrate de que las referencias comiencen desde la fila 8
+                data = Reference(ws_manual, min_col=2, min_row=8,
+                                 max_row=8 + len(datos_finales) - 1)  # Columna B (Grados)
                 categories = Reference(ws_manual, min_col=1, min_row=8,
-                                       max_row=7 + len(datos_finales))  # Columna A (Nivel)
+                                       max_row=8 + len(datos_finales) - 1)  # Columna A (Nivel)
 
                 # Agregar los datos a la gráfica
-                chart.add_data(data, titles_from_data=True)
+                chart.add_data(data, titles_from_data=False)  # titles_from_data=False para evitar usar B8 como título
                 chart.set_categories(categories)
 
                 # Configurar las etiquetas de datos (valores arriba de las barras)
@@ -1602,7 +1650,7 @@ class AppInterface3(AppBase):
         ws['B2'] = "Edad"
         ws['C2'] = "Sexo"
         ws['D2'] = "Actividad Física"
-        ws['E2'] = "Fecha"
+        ws['E2'] = "Fecha de prueba"
         for cell in ws['A2:E2'][0]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
@@ -1613,7 +1661,7 @@ class AppInterface3(AppBase):
         ws['B3'] = self.patient_data.get("Edad", "No registrado")
         ws['C3'] = self.patient_data.get("Sexo", "No registrado")
         ws['D3'] = self.patient_data.get("Actividad", "No registrado")
-        ws['E3'] = "Fecha de prueba"  # Puedes agregar un campo para la fecha si es necesario
+        ws['E3'] = self.patient_data.get("Fecha de prueba", "No registrado")  # Puedes agregar un campo para la fecha si es necesario
         for cell in ws['A3:E3'][0]:
             cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
             cell.alignment = Alignment(horizontal="center", vertical="center")
