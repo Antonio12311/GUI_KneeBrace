@@ -882,9 +882,9 @@ class AppInterface2(AppBase):
 
                 # Referencias para los datos de la gráfica
                 data = Reference(ws_auto, min_col=2, min_row=8,
-                                 max_row=8 + len(datos_finales) - 1)  # Columna B (Grados)
+                                 max_row=8 + len(datos_finales))  # Columna B (Grados)
                 categories = Reference(ws_auto, min_col=1, min_row=8,
-                                       max_row=8 + len(datos_finales) - 1)  # Columna A (Nivel)
+                                       max_row=8 + len(datos_finales))  # Columna A (Nivel)
 
                 # Agregar los datos a la gráfica
                 chart.add_data(data, titles_from_data=False)  # titles_from_data=False para evitar usar B8 como título
@@ -1567,22 +1567,28 @@ class AppInterface3(AppBase):
                 # Crear el nombre del archivo con el número de expediente
                 output_path = output_folder / f"{expediente}.xlsx"
 
-                # Crear un nuevo libro de Excel
-                wb = openpyxl.Workbook()
-
-                # Crear la hoja para el modo manual
-                ws_manual = wb.active
-                ws_manual.title = "Modo Manual"
+                # Verificar si el archivo ya existe
+                if output_path.exists():
+                    # Abrir el archivo existente
+                    wb = openpyxl.load_workbook(output_path)
+                    # Verificar si ya existe una hoja llamada "Modo Manual"
+                    if "Modo Manual" in wb.sheetnames:
+                        # Si existe, eliminarla para evitar duplicados
+                        wb.remove(wb["Modo Manual"])
+                    # Crear una nueva hoja para el modo manual
+                    ws_manual = wb.create_sheet("Modo Manual")
+                else:
+                    # Si el archivo no existe, crear uno nuevo
+                    wb = openpyxl.Workbook()
+                    # Crear la hoja para el modo manual
+                    ws_manual = wb.active
+                    ws_manual.title = "Modo Manual"
 
                 # Escribir la tabla de información personal
                 self.write_patient_info(ws_manual)
 
                 # Escribir la tabla de resumen de pruebas de fuerza
                 self.write_test_summary(ws_manual, datos_finales)
-
-                # ----------------------
-                # Crear la gráfica de barras a partir de la tabla de resumen
-                # ----------------------
 
                 # Crear la gráfica de barras
                 chart = BarChart()
@@ -1591,11 +1597,10 @@ class AppInterface3(AppBase):
                 chart.y_axis.title = "Grados"  # Eje Y: Grados
 
                 # Referencias para los datos de la gráfica
-                # Asegúrate de que las referencias comiencen desde la fila 8
                 data = Reference(ws_manual, min_col=2, min_row=8,
-                                 max_row=8 + len(datos_finales) - 1)  # Columna B (Grados)
+                                 max_row=8 + len(datos_finales))  # Columna B (Grados)
                 categories = Reference(ws_manual, min_col=1, min_row=8,
-                                       max_row=8 + len(datos_finales) - 1)  # Columna A (Nivel)
+                                       max_row=8 + len(datos_finales))  # Columna A (Nivel)
 
                 # Agregar los datos a la gráfica
                 chart.add_data(data, titles_from_data=False)  # titles_from_data=False para evitar usar B8 como título
