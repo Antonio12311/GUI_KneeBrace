@@ -8,18 +8,17 @@ import serial
 import os
 import math
 import time
-import pandas as pd
 import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter  # Importar la función para convertir números a letras de columna
+from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.chart import BarChart, Reference
-from openpyxl.chart.label import DataLabelList  # Importar DataLabelList
 
+
+# Dirección de carpeta que contiene las imagenes de los botones
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
 ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 
-
+# Evita que se ingresen valores no númericos a la entrada de edad
 def validate_number_input(new_value):
     if new_value == "":
         return True
@@ -29,38 +28,48 @@ def validate_number_input(new_value):
     except ValueError:
         return False
 
-
+# Permite llamar la imagen de un botón
 def relative_to_assets(path: str) -> Path:
-    return ASSETS_PATH / Path(path)
+    return ASSETS_PATH / Path(path) # La entrada es el nombre de la imagen como variable str
 
+
+"""
+La clase de "Controller" tiene la tarea de realizar las sig. funciones
+    * Permite el cambio entre ventanas de la aplicación
+    * Declara las acciones de seguridad necesarias al cambiar y cerrar ventanas
+    * Declara las variables de inf. del usuario que se comparten con las demas ventanas
+"""
 
 class Controller:
     def __init__(self, root):
         self.root = root
-        self.patient_data = {}  # Shared data structure
+        self.patient_data = {}  # Crea un diccionario vacío en el que se almacena la inf. del paciente
         self.current_frame = None
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Bind the closing event
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Enlaza el evento on_closing al protoc. de ventana
 
+    """Cambio entre ventanas."""
     def switch_frame(self, new_frame_class):
-        """Switch to a new frame."""
         if hasattr(self.current_frame, 'disconnect_arduino'):
-            self.current_frame.disconnect_arduino()  # Disconnect the Arduino if the method exists
+            self.current_frame.disconnect_arduino()  # Manda a llamar la función de desconexión dentro de cada ventana
         if self.current_frame:
-            self.current_frame.pack_forget()  # Hide the current frame
+            self.current_frame.pack_forget()  # Oculta la ventana actual
         self.current_frame = new_frame_class(self.root, self, self.patient_data)
         self.current_frame.pack(fill="both", expand=True)
 
+    """Controla el evento al cerrar ventana."""
     def on_closing(self):
-        """Handle the application closing event."""
         if hasattr(self.current_frame, 'turn_off_motor'):
-            self.current_frame.turn_off_motor()  # Turn off the motor if the method exists
+            self.current_frame.turn_off_motor()  # Encuentra y activa función de apagado del motor
         if hasattr(self.current_frame, 'disconnect_arduino'):
-            self.current_frame.disconnect_arduino()  # Disconnect the Arduino if the method exists
-        time.sleep(0.05)  # Small delay
-        self.root.destroy()  # Close the application
+            self.current_frame.disconnect_arduino()  # Encuentra y activa la función que desconecta del arduino
+        time.sleep(0.05)
+        self.root.destroy()  # Cierra la ventana
 
 
-# --------------------------- Clase Base para compartir datos --------------------------- #
+"""
+La clase de "AppBase" contiene el formato y colores que la interfaz necesita
+"""
+
 class AppBase(tk.Frame):
     def __init__(self, root, controller, patient_data):
         super().__init__(root)
@@ -75,6 +84,13 @@ class AppBase(tk.Frame):
         self.validate_func = self.register(validate_number_input)  # Validación numérica
 
 
+"""
+# --------------------------------------- PRIMERA VENTANA ----------------------------------------------- #
+Se reciben los datos del paciente
+    * Ingresa: nombre, # de expediente, edad, sexo. act. física y fecha
+    * Establece la dirección del archivo a generar con los datos del estudio
+
+"""
 class AppInterface0(AppBase):
     def __init__(self, root, controller, patient_data):
         super().__init__(root, controller, patient_data)
@@ -94,6 +110,7 @@ class AppInterface0(AppBase):
         self.validate_func = self.canvas.register(validate_number_input)
         self.init_widgets()
 
+    """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
     def create_canvas(self, dimension_y, dimension_x):
         canvas = tk.Canvas(
             self.root,
@@ -107,63 +124,72 @@ class AppInterface0(AppBase):
         canvas.place(x=0, y=0)
         return canvas
 
+    """Botones de la página número 0"""
     def init_widgets(self):
-        # Title
-        self.canvas.create_text(145, 25, anchor="nw", text="Registro de paciente", fill=self.text_color, font=("Inter", 30))
+        # Titulo
+        self.canvas.create_text(90, 25, anchor="nw", text="Registro de paciente", fill=self.text_color, font=("Inter", 30))
 
-        # Patient name
-
+        # Nombre del paciente
         self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
         self.canvas.create_image(105, 101, image=self.patient_bg_image, anchor="nw")
-
         self.entry_00 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, font=("Inter", 13))
-        self.entry_00.place(x=140.0, y=127.0, width=320.0, height=20.0)
+        self.entry_00.place(x=140.0, y=127.0, width=350.0, height=23.0)
 
-        # Expedient #
+        # Numero de expediente
         self.exp_bg_image = PhotoImage(file=relative_to_assets("EXP_ENTR_BG.png"))
         self.canvas.create_image(105, 169, image=self.exp_bg_image, anchor="nw")
         self.entry_02 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal", font=("Inter", 13))
         self.entry_02.place(x=140.0, y=195.0, width=320.0, height=20.0)
 
-        # Age
+        # Edad
         self.age_bg_image = PhotoImage(file=relative_to_assets("AGE_ENTRY_BG.png"))
         self.canvas.create_image(105, 237, image=self.age_bg_image, anchor="nw")
         self.entry_01 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, state="normal",
                               font=("Inter", 13), validate="key", validatecommand=(self.validate_func, "%P"))
         self.entry_01.place(x=140.0, y=263.0, width=100.0, height=20.0)
 
-        # Sex
+        # Sexo
         self.sex_bg_image = PhotoImage(file=relative_to_assets("SEX_ENTRY_BG.png"))
         self.canvas.create_image(327, 237, image=self.sex_bg_image, anchor="nw")
         genders = ["Masculino", "Femenino"]
         self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Inter", 12))
         self.combobox1.config(state="readonly")
         self.combobox1.set("...")
-        self.combobox1.place(x=360.0, y=262.0, width=120.0, height=20)
+        self.combobox1.place(x=360.0, y=262.0, width=150.0, height=24)
 
-        # Physical activity
+        # Actividad física
         self.act_bg_image = PhotoImage(file=relative_to_assets("ACT_ENTRY_BG.png"))
         self.canvas.create_image(105, 308, image=self.act_bg_image, anchor="nw")
         lifestl = ["Sedentario", "Actividad moderada", "Deportista"]
         self.combobox2 = ttk.Combobox(self.canvas, values=lifestl, font=("Inter", 13))
         self.combobox2.config(state="readonly")
         self.combobox2.set("...")
-        self.combobox2.place(x=140.0, y=333.0, width=200.0, height=24)
+        self.combobox2.place(x=140.0, y=333.0, width=250.0, height=25)
 
-        # Date
+        # Fecha del estudio
         self.date_bg_image = PhotoImage(file=relative_to_assets("DATE_ENTRY_BG.png"))
         self.canvas.create_image(105, 376, image=self.date_bg_image, anchor="nw")
-        self.entry_05 = Entry(bd=0, bg="white", fg="#000000", highlightthickness=0, font=("Inter", 13))
-        self.entry_05.place(x=140.0, y=396.0, width=120.0, height=20.0)
+        self.day_label = ttk.Label(root, text="Day:")
+        self.day_combobox = ttk.Combobox(root, values=[str(i).zfill(2) for i in range(1, 32)])
+        self.day_combobox.set("01")
+        self.day_combobox.place(x=120, y=397, width=50)
+        self.month_label = ttk.Label(root, text="Month:")
+        self.month_combobox = ttk.Combobox(root, values=[str(i).zfill(2) for i in range(1, 13)])
+        self.month_combobox.set("01")
+        self.month_combobox.place(x=177, y=397, width=50)
+        self.year_label = ttk.Label(root, text="Year:")
+        self.year_combobox = ttk.Combobox(root, values=[str(i) for i in range(2000, 2031)])
+        self.year_combobox.set("2023")
+        self.year_combobox.place(x=235, y=397, width=60)
 
-        # Next page button
+        # Botón de cambio de pantalla y almacenamiento de inf. en variables
         self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
         self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                        command=self.save_and_next, state="normal", relief="flat",
                                        borderwidth=0, bg=self.used_color,)
         self.switch_button.place(x=224.0, y=476.0)
 
-        # Settings page button
+        # Botón a página de ajustes
         self.settings_bg_image = PhotoImage(file=relative_to_assets("COG_BG.png"))
         self.settings_button = Button(
             self.canvas,
@@ -173,6 +199,7 @@ class AppInterface0(AppBase):
         )
         self.settings_button.place(x=544, y=476)
 
+        # Selección de dirección del archivo
         self.select_bg_image = PhotoImage(file=relative_to_assets("SELECT_BG_IMAGE.png"))
         self.select_folder_button = Button(
             self.canvas,
@@ -184,36 +211,22 @@ class AppInterface0(AppBase):
         )
         self.select_folder_button.place(x=400, y=386)
 
+    """función que asigna la dirección del archivo"""
     def select_output_folder(self):
-        """Abre un diálogo para seleccionar la carpeta de salida."""
-        folder_selected = filedialog.askdirectory()
+        folder_selected = filedialog.askdirectory() # Abre un diálogo para seleccionar la carpeta de salida.
         if folder_selected:
             self.output_folder = Path(folder_selected)
             self.patient_data["output_folder"] = self.output_folder  # Guardar la ruta en patient_data
             messagebox.showinfo("Carpeta seleccionada", f"Los archivos se guardarán en: {self.output_folder}")
 
-    def get_all_entries(self):
-        return (
-            self.entry_00.get(),
-            self.entry_01.get(),
-            self.entry_02.get(),
-            self.combobox1.set("...")  # Sex
-        )
-
-    def reset_entries(self):
-        # Reset all entries to blank
-        self.entry_00.delete(0, tk.END)
-        self.entry_01.delete(0, tk.END)
-        self.entry_02.delete(0, tk.END)
-
+    """Guarda la información y cambia de interfaz."""
     def save_and_next(self):
-        """Guarda la información y cambia de interfaz."""
         self.patient_data["Nombre"] = self.entry_00.get()
         self.patient_data["Edad"] = self.entry_01.get()
         self.patient_data["Sexo"] = self.combobox1.get()
         self.patient_data["Actividad"] = self.combobox2.get()
         self.patient_data["Expediente"] = self.entry_02.get()
-        self.patient_data["Fecha de prueba"] = self.entry_05.get()
+        # self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
 
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
@@ -223,14 +236,12 @@ class AppInterface0(AppBase):
     def error_message(self):
         messagebox.showwarning("Error", "Asegurese de llenar todos los espacios")
 
-    def show(self):
-        self.canvas.place(x=0, y=0)  # Show the current interface
 
-    def on_closing(self):
-        self.root.destroy()
+"""
+# --------------------------------------- SEGUNDA VENTANA ----------------------------------------------- #
+Presenta las modalidades: automática y manual
 
-
-# --------------------------- Segunda Interfaz --------------------------- #
+"""
 class AppInterface1(AppBase):
     def __init__(self, root, controller, patient_data):
         super().__init__(root, controller, patient_data)
@@ -248,7 +259,6 @@ class AppInterface1(AppBase):
         self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
 
         self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
-        self.validate_func = self.canvas.register(validate_number_input)
         self.init_widgets()
 
     def create_canvas(self, dimension_y, dimension_x):
@@ -265,9 +275,8 @@ class AppInterface1(AppBase):
         return canvas
 
     def init_widgets(self):
-        # switch modes
-        self.canvas.create_text(145, 25, anchor="nw", text="Seleccione modalidad", fill=self.text_color, font=("Inter", 30))
-
+        self.canvas.create_text(85, 25, anchor="nw", text="Seleccione modalidad", fill=self.text_color,
+                                font=("Inter", 30))
         self.canvas.create_text(135, 370, anchor="nw", text="MANUAL", fill=self.text_color, font=("Inter", 14))
         self.manual_bg_image = PhotoImage(file=relative_to_assets("MANUAL_BTN_BG.png"))
         self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
@@ -290,10 +299,16 @@ class AppInterface1(AppBase):
         self.go_back_button.place(x=520.0, y=474.0)
 
 
-# --------------------------- Tercera Interfaz --------------------------- #
+"""
+# --------------------------------------- TERCERA VENTANA ----------------------------------------------- #
+Ventana que realiza el estudio automático
+
+"""
 class AppInterface2(AppBase):
     def __init__(self, root, controller, patient_data):
         super().__init__(root, controller, patient_data)
+        self.columns = None
+        self.column_dimensions = None
         self.position = None
         self.messagebox = None
         self.level = None
@@ -367,8 +382,7 @@ class AppInterface2(AppBase):
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN0.png"))
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN0.png"))
 
-
-        self.toggle_connection_button = Button(
+        self.toggle_connection_button = Button( #Botón de conexión
             self.canvas,
             image=self.connect_button_image,
             command=self.toggle_connection,
@@ -377,12 +391,14 @@ class AppInterface2(AppBase):
         )
         self.toggle_connection_button.place(x=70, y=550)
 
+    """Cambia el estado de la conexión"""
     def toggle_connection(self):
         if self.is_connected:
             self.disconnect_arduino()
         else:
             self.connect_to_arduino()
 
+    """Selección automáticadel  puerto conectado a Arduino"""
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
@@ -390,6 +406,7 @@ class AppInterface2(AppBase):
                 return port.device
         return None
 
+    """Lectura de datos seriales y cambbio de posición de animación"""
     def read_serial_port(self):
         try:
             while not self.stop_threads:
@@ -417,14 +434,7 @@ class AppInterface2(AppBase):
             print("Error reading the serial port:", e)
             self.stop_threads = True
 
-    def send_serial_port(self):
-        try:
-            while not self.stop_threads is True:
-                time.sleep(0.05)
-        except Exception as e:
-            print("Error sending data", e)
-            self.stop_threads = True
-
+    """Conexión a arduino e inicialización de threads de lectura"""
     def connect_to_arduino(self):
         arduino_port = self.find_arduino_port()
         if arduino_port:
@@ -445,12 +455,12 @@ class AppInterface2(AppBase):
                         self.ser.close()
                         self.ser = None
                 if self.ser is not None:
-                    # Starting the reading thread
                     reading_thread = threading.Thread(target=self.read_serial_port, args=self.ser)
                     reading_thread.start()
         else:
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
+    """Desconexión de arduino y detención de threads de lectura"""
     def disconnect_arduino(self):
         self.turn_off_motor()
         if self.ser and self.ser.is_open:
@@ -464,18 +474,21 @@ class AppInterface2(AppBase):
             self.is_connected = False
             self.stop_threads = False
 
+    """Inicialización de temporizador"""
     def start_timer(self):
         if not self.running:
-            self.time_left = 10  # Set the countdown time in seconds
+            self.time_left = 10  # Asigna la duración del temporizador
             self.running = True
-            self.message_shown = False  # Reset the flag when the timer starts
+            self.message_shown = False
             self.update_timer()
 
+    """Detiene el temporizador"""
     def stop_timer(self):
         if self.running:
-            self.time_left = 0  # Set the countdown time in seconds
+            self.time_left = 0  # Termina el temporizador
             self.running = False
 
+    """Actualiza el temporizador y determina el resultado del estudio"""
     def update_timer(self):
         if not self.running:
             return
@@ -486,74 +499,114 @@ class AppInterface2(AppBase):
             self.time_left -= 1
 
             if self.position >= self.max_angle and not self.message_shown:
+                # Posición objetivo alcanzada
                 self.running = False
                 self.achieved_test("#06D7A0")
                 self.label_timer.config(text="00:00")
                 messagebox.showinfo("Timer", "Ha alcanzado la posición deseada!")
-                self.message_shown = True  # Set the flag to True after showing the message
+                self.message_shown = True
 
             if self.running:
                 self.root.after(1000, self.update_timer)
 
         elif self.time_left == 0 and self.position <= self.max_angle and not self.message_shown:
+            # Posición objetivo no alcanzada
             self.running = False
             self.failed_test("#F04770")
             self.label_timer.config(text="00:00")
             messagebox.showinfo("Timer", "No ha alcanzado la posición deseada!")
             self.message_shown = True
 
+    """ Lógica ejecutada con el botón iniciar. """
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
+            # Se cambia la imagen del botón y se inicializa la animación del indicador y el envío de datos seriales
             messagebox.showinfo("Estudio", "Se ha comenzado a aplicar fuerza!")
             self.animation_on_write_serial()
             self.boton_toggle.config(text="Detener", image=self.imagen_detener, command=self.toggle_boton)
         else:
+            # Se cambia la imagen del botón y se detiene la animación, el timer, y el thread de envío de datos seriales
             self.animation_off_write_serial()
             self.stop_timer()
             self.label_timer.config(text="00:00")
             self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
 
-            # Stop the send_value loop
+            # Detiene el ciclo de envío de datos
             self.send_value_running = False
             if self.send_value_thread is not None:
-                self.send_value_thread.join()  # Wait for the thread to finish
+                self.send_value_thread.join()  # Espera a que el thread de envío de datos termine
                 self.send_value_thread = None
 
-            # Reset the squares and achieved levels if necessary
+            # Reinicia los colores del indicador de niveles obtenidos/no obtenidos
             if self.level.startswith("Nivel "):
                 level_num = int(self.level.split(" ")[1])
                 self.squares[level_num - 1].config(bg="#FFFFFF")
                 self.achieved_levels[level_num - 1] = False
 
+    """ Envío de datos seriales """
     def send_value(self):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
-        divided_value = nivel / 4
-        cumulative_value = 0
 
-        while self.send_value_running and cumulative_value < nivel:
-            cumulative_value += divided_value
-            if self.ser and self.ser.is_open:  # Ensure the serial port is open
-                self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
-                try:
-                    self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
-                    print(f"Sent: {cumulative_value}")  # Debug print
-                except Exception as e:
-                    print(f"Error writing to serial port: {e}")
-                finally:
-                    self.arduino_lock.release()  # Release the lock
-            else:
-                print("Serial port is not open.")
-                break
+        if nivel <= 3:
+            print("safe")
+            cadena = str(self.combobox.get())
+            nivel = int(cadena.split()[1])
+            divided_value = nivel / 4
+            cumulative_value = 0
 
-            time.sleep(2)  # Wait for 2 seconds before the next iteration
+            while self.send_value_running and cumulative_value < nivel:
+                cumulative_value += divided_value
+                if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                    try:
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                        print(f"Sent: {cumulative_value}")  # Debug print
+                    except Exception as e:
+                        print(f"Error writing to serial port: {e}")
+                    finally:
+                        self.arduino_lock.release()  # Release the lock
+                else:
+                    print("Serial port is not open.")
+                    break
 
-        # When max torque is reached
-        if cumulative_value >= nivel:
-            self.max_torque_reached = True
-            messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
-            self.start_timer()  # Start the countdown timer
+                time.sleep(2)  # Wait for 2 seconds before the next iteration
 
+            # When max torque is reached
+            if cumulative_value >= nivel:
+                self.max_torque_reached = True
+                messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+                self.start_timer()
+
+        elif (int(nivel) >= 4) and self.user_input.get().isdigit():
+            cadena = str(self.user_input.get())
+            nivel = int(cadena)
+            divided_value = nivel / 4
+            cumulative_value = 0
+            while self.send_value_running and cumulative_value < nivel:
+                cumulative_value += divided_value
+                if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                    try:
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                        print(f"Sent: {cumulative_value}")  # Debug print
+                    except Exception as e:
+                        print(f"Error writing to serial port: {e}")
+                    finally:
+                        self.arduino_lock.release()  # Release the lock
+                else:
+                    print("Serial port is not open.")
+                    break
+
+                time.sleep(2)  # Wait for 2 seconds before the next iteration
+
+            # When max torque is reached
+            if cumulative_value >= nivel:
+                self.max_torque_reached = True
+                messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+                self.start_timer()
+
+    """ Inicia la animación de barra, enciende el motor e inicia el envío de datos seriales """
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
         self.start_animation()
@@ -607,9 +660,8 @@ class AppInterface2(AppBase):
             time.sleep(0.05)
             self.arduino_lock.release()
 
-
-    def validate_input(self):
-        return self.text.isdigit() or self.text == ""
+    def validate_input(self, new_value):
+        return new_value.isdigit() or new_value == ""
 
     def update_state(self, event=None):
         if self.combobox.get() in ["Nivel 4", "Nivel 5"]:
@@ -656,13 +708,13 @@ class AppInterface2(AppBase):
         self.apply_button_widget.config(state="disabled")
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label1.place(x=570, y=650)
+        self.mensaje_label1.place(x=590, y=640)
         self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label2.place(x=570, y=670)
+        self.mensaje_label2.place(x=590, y=670)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#000000")
         self.strengthT_label.place(x=360, y=600)
-        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Inter", 18), bg=self.used_color, fg="#000000")
+        self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#000000")
         self.strengthKG_label.place(x=540, y=600)
 
         self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza",font=("Inter", 13),
@@ -786,17 +838,17 @@ class AppInterface2(AppBase):
             self.level_num = int(self.level.split(" ")[1])
 
             if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
                                                or int(self.value) == 0):
-                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#FFFFFF")
                 return
             if not self.check_last_lvl(self.level_num):
                 return
@@ -1042,7 +1094,7 @@ class AppInterface2(AppBase):
     def init_widgets(self):
         # Mostrar información del paciente
         nombre_paciente = self.patient_data.get("Nombre", "No registrado")
-        self.nombre_title = self.canvas.create_text(200, 110, text=f"Animación de pierna de: {nombre_paciente}",
+        self.nombre_title = self.canvas.create_text(200, 110, text=f"Pierna de: {nombre_paciente}",
                                                     font=("Inter", 13), fill=self.text_color)
 
         self.return_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
@@ -1263,30 +1315,64 @@ class AppInterface3(AppBase):
     def send_value(self):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
-        divided_value = nivel / 4
-        cumulative_value = 0
 
-        while self.send_value_running and cumulative_value < nivel:
-            cumulative_value += divided_value
-            if self.ser and self.ser.is_open:  # Ensure the serial port is open
-                self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
-                try:
-                    self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
-                    print(f"Sent: {cumulative_value}")  # Debug print
-                except Exception as e:
-                    print(f"Error writing to serial port: {e}")
-                finally:
-                    self.arduino_lock.release()  # Release the lock
-            else:
-                print("Serial port is not open.")
-                break
+        if nivel <= 3:
+            print("safe")
+            cadena = str(self.combobox.get())
+            nivel = int(cadena.split()[1])
+            divided_value = nivel / 4
+            cumulative_value = 0
 
-            time.sleep(2)  # Wait for 2 seconds before the next iteration
+            while self.send_value_running and cumulative_value < nivel:
+                cumulative_value += divided_value
+                if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                    try:
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                        print(f"Sent: {cumulative_value}")  # Debug print
+                    except Exception as e:
+                        print(f"Error writing to serial port: {e}")
+                    finally:
+                        self.arduino_lock.release()  # Release the lock
+                else:
+                    print("Serial port is not open.")
+                    break
 
-        # When max torque is reached
-        if cumulative_value >= nivel:
-            self.max_torque_reached = True
-            messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+                time.sleep(2)  # Wait for 2 seconds before the next iteration
+
+            # When max torque is reached
+            if cumulative_value >= nivel:
+                self.max_torque_reached = True
+                messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+
+        elif (int(nivel) >= 4) and self.user_input.get().isdigit():
+            cadena = str(self.user_input.get())
+            nivel = int(cadena)
+            divided_value = nivel / 4
+            cumulative_value = 0
+            while self.send_value_running and cumulative_value < nivel:
+                cumulative_value += divided_value
+                if self.ser and self.ser.is_open:  # Ensure the serial port is open
+                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                    try:
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
+                        print(f"Sent: {cumulative_value}")  # Debug print
+                    except Exception as e:
+                        print(f"Error writing to serial port: {e}")
+                    finally:
+                        self.arduino_lock.release()  # Release the lock
+                else:
+                    print("Serial port is not open.")
+                    break
+
+                time.sleep(2)  # Wait for 2 seconds before the next iteration
+
+            # When max torque is reached
+            if cumulative_value >= nivel:
+                self.max_torque_reached = True
+                messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
+
+
 
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
@@ -1335,8 +1421,8 @@ class AppInterface3(AppBase):
             time.sleep(0.05)
             self.arduino_lock.release()
 
-    def validate_input(self):
-        return self.text.isdigit() or self.text == ""
+    def validate_input(self, new_value):
+        return new_value.isdigit() or new_value == ""
 
     def update_state(self, event=None):
         if self.combobox.get() in ["Nivel 4", "Nivel 5"]:
@@ -1384,13 +1470,13 @@ class AppInterface3(AppBase):
         self.apply_button_widget.config(state="disabled")
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label1.place(x=570, y=650)
+        self.mensaje_label1.place(x=590, y=640)
         self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label2.place(x=570, y=670)
+        self.mensaje_label2.place(x=590, y=670)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#404045")
         self.strengthT_label.place(x=360, y=600)
-        self.strengthKG_label = tk.Label(self.canvas, text="Kg", font=("Inter", 18), bg=self.used_color, fg="#404045")
+        self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#404045")
         self.strengthKG_label.place(x=540, y=600)
 
         self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza",font=("Inter", 13),
@@ -1506,17 +1592,17 @@ class AppInterface3(AppBase):
             self.level_num = int(self.level.split(" ")[1])
 
             if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
                                                or int(self.value) == 0):
-                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#000000")
-                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#000000")
+                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#FFFFFF")
                 return
             if not self.check_last_lvl(self.level_num):
                 return
@@ -1760,7 +1846,7 @@ class AppInterface3(AppBase):
     def init_widgets(self):
         # Mostrar información del paciente
         nombre_paciente = self.patient_data.get("Nombre", "No registrado")
-        self.nombre_title = self.canvas.create_text(190, 110, text=f"Animación de pierna de: {nombre_paciente}",
+        self.nombre_title = self.canvas.create_text(190, 110, text=f"Pierna de: {nombre_paciente}",
                                                     fill=self.text_color, font=("Inter", 13))
 
         self.return_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
