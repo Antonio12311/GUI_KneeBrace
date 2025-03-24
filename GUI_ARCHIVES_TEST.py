@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox, PhotoImage, Button, Entry
+from tkinter import ttk, messagebox, PhotoImage, Button, Entry, filedialog
 from pathlib import Path
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -8,6 +8,10 @@ import serial
 import os
 import math
 import time
+import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter  # Importar la función para convertir números a letras de columna
 
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
@@ -28,12 +32,13 @@ def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
 
-class AppInterface0:
+class AppInterface1:
     def __init__(self, root):
         self.root = root
         self.used_color = 'white'
         self.dimension_x0 = "630"
         self.dimension_y0 = "550"
+        self.output_folder = OUTPUT_PATH  # Carpeta predeterminada
 
         self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
         self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
@@ -65,7 +70,6 @@ class AppInterface0:
         self.canvas.create_text(145, 25, anchor="nw", text="Registro de paciente", fill="#000000", font=("Inter", 30))
 
         # Patient name
-
         self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
         self.canvas.create_image(105, 101, image=self.patient_bg_image, anchor="nw")
 
@@ -87,7 +91,7 @@ class AppInterface0:
 
         # Sex
         self.sex_bg_image = PhotoImage(file=relative_to_assets("SEX_ENTRY_BG.png"))
-        self.canvas.create_image(327, 237, image=self.age_bg_image, anchor="nw")
+        self.canvas.create_image(327, 237, image=self.sex_bg_image, anchor="nw")
         genders = ["Masculino", "Femenino"]
         self.combobox1 = ttk.Combobox(self.canvas, values=genders, font=("Inter", 12))
         self.combobox1.config(state="readonly")
@@ -109,20 +113,41 @@ class AppInterface0:
 
         # Next page button
         self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
-        self.switch_button = tk.Button(self.canvas, image=self.register_bg_image,
+        self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                        command=self.switch_to_interface1, state="normal", relief="flat",
                                        borderwidth=0, bg=self.used_color,)
         self.switch_button.place(x=224.0, y=476.0)
 
         # Settings page button
         self.settings_bg_image = PhotoImage(file=relative_to_assets("COG_BG.png"))
-        self.settings_button = Button(
+        self.settings_button = tk.Button(
             self.canvas,
             image=self.settings_bg_image,
             relief="flat",
+            state="normal",
+            borderwidth=0,
             bg=self.used_color
         )
         self.settings_button.place(x=544, y=476)
+
+        # Botón para seleccionar carpeta de salida
+        self.select_bg_image = PhotoImage(file=relative_to_assets("SELECT_BG_IMAGE.png"))
+        self.select_folder_button = Button(
+            self.canvas,
+            image=self.select_bg_image,
+            command=self.select_output_folder,
+            relief="flat",
+            state="normal",
+            bg=self.used_color
+        )
+        self.select_folder_button.place(x=400, y=386)
+
+    def select_output_folder(self):
+        """Abre un diálogo para seleccionar la carpeta de salida."""
+        folder_selected = filedialog.askdirectory()
+        if folder_selected:
+            self.output_folder = Path(folder_selected)
+            messagebox.showinfo("Carpeta seleccionada", f"Los archivos se guardarán en: {self.output_folder}")
 
     def get_all_entries(self):
         return (
@@ -142,84 +167,13 @@ class AppInterface0:
         messagebox.showwarning("Error", "Asegurese de llenar todos los espacios")
 
     def switch_to_interface1(self):
+        """
+        if self.entry_00 == "" or self.entry_01 == "" or self.entry_02 == "" or self.combobox1.get() == "...":
+            self.error_message()
+
+        else:"""
         self.canvas.place_forget()  # Hide the current interface
-        AppInterface1(self.root, self)  # Show the second interface
-
-    def show(self):
-        self.canvas.place(x=0, y=0)  # Show the current interface
-
-    def on_closing(self):
-        self.root.destroy()
-
-
-class AppInterface1:
-    def __init__(self, root, register_interface):
-        self.root = root
-        self.used_color = 'white'
-        self.dimension_x0 = "630"
-        self.dimension_y0 = "550"
-        self.register_interface = register_interface
-
-        self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
-        self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
-        self.x0 = (self.screen_width // 2) - (int(self.dimension_x0) // 2)  # Calcula la posición X
-        self.y0 = (self.screen_height // 2) - (int(self.dimension_y0) // 2)  # Calcula la posición Y
-        self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
-
-        self.root.resizable(False, False)
-        self.root.configure(bg=self.used_color)
-        self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
-        self.validate_func = self.canvas.register(validate_number_input)
-        self.init_widgets()
-
-    def create_canvas(self, dimension_y, dimension_x):
-        canvas = tk.Canvas(
-            self.root,
-            bg=self.used_color,
-            height=int(dimension_y),
-            width=int(dimension_x),
-            bd=0,
-            highlightthickness=0,
-            relief="ridge"
-        )
-        canvas.place(x=0, y=0)
-        return canvas
-
-    def init_widgets(self):
-        # Title
-        self.canvas.create_text(70, 25, anchor="nw", text="Seleccione modo de estudio", fill="#000000", font=("Inter", 30))
-
-        # Next page button
-        self.canvas.create_text(122, 370, anchor="nw", text="Modo manual", fill="#000000", font=("Inter", 13))
-        self.manual_bg_image = PhotoImage(file=relative_to_assets("MANUAL_BTN_BG.png"))
-        self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
-                                       command=self.switch_to_interface1, state="normal", relief="flat",
-                                       borderwidth=0, bg=self.used_color,)
-        self.manual_button.place(x=97.0, y=198.0)
-
-        self.canvas.create_text(405, 370, anchor="nw", text="Modo automático", fill="#000000", font=("Inter", 13))
-        self.automatic_bg_image = PhotoImage(file=relative_to_assets("AUTOMATIC_BTN.png"))
-        self.automatic_button = tk.Button(self.canvas, image=self.automatic_bg_image,
-                                       command=self.switch_to_interface2, state="normal", relief="flat",
-                                       borderwidth=0, bg=self.used_color,)
-        self.automatic_button.place(x=381.0, y=183.0)
-
-        self.go_back_bg_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN0.png"))
-        self.go_back_button = tk.Button(self.canvas, image=self.go_back_bg_image,
-                                       command=self.switch_to_interface1, state="normal", relief="flat",
-                                       borderwidth=0, bg=self.used_color,)
-        self.go_back_button.place(x=39.0, y=474.0)
-
-    def error_message(self):
-        messagebox.showwarning("Error", "Asegurese de llenar todos los espacios")
-
-    def switch_to_interface1(self):
-        self.canvas.place_forget()  # Hide the current interface
-        self.register_interface.show()  # Show the main interface
-
-    def switch_to_interface2(self):
-        self.canvas.place_forget()
-        AppInterface2(self.root, self)
+        AppInterface2(self.root, self)  # Show the second interface
 
     def show(self):
         self.canvas.place(x=0, y=0)  # Show the current interface
@@ -250,6 +204,16 @@ class AppInterface2:
         self.is_connected = False
         self.active_animation = True
         self.blink_state = True
+        self.grados = 0
+        self.torque = 0
+        self.nivel_actual = None
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
         self.frames_path = Path(__file__).resolve().parent / "light_video"
         self.app_interface = init_interface
         self.squares = []
@@ -346,6 +310,7 @@ class AppInterface2:
                                 rad = abs(float(values[0]))
                                 self.position = (rad * 180) / math.pi
                                 self.torque = abs(float(values[1]))
+                                self.grados = self.position
                                 if self.leg_animation:
                                     self.leg_animation.update_frame(self.position, self.torque)
                             except ValueError:
@@ -557,8 +522,6 @@ class AppInterface2:
 
         self.achieved_levels = [False] * 5
 
-
-
     def save_min_angle(self):
         self.canvas.itemconfig(self.min_angle_text, text=f"{self.position:.1f} °")
         self.max_angle = self.position
@@ -567,8 +530,14 @@ class AppInterface2:
         self.canvas.itemconfig(self.max_angle_text, text=f"{self.position:.1f} °")
         self.min_angle = self.position
 
-
     def achieved_test(self, color):
+        nivel_actual = self.combobox.get()
+        if nivel_actual in self.datos:
+            self.datos[nivel_actual].append({
+                "Grados": self.grados,
+                "Torque": self.torque,
+                "Llegó": "Sí" if color == "#06D7A0" else "No"  # Dependiendo del color, sabes si llegó o no
+            })
         self.highlight(color)
         self.combobox.config(state="readonly")
         self.turn_off_motor()
@@ -611,7 +580,147 @@ class AppInterface2:
         self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def save_boton(self):
-        messagebox.showinfo("Test Finalizado", "El registro y test ha concluido. Su archivo ha sido guardado.")
+        try:
+            print("Iniciando la función save_boton...")  # Depuración
+
+            # Crear una lista para almacenar todos los datos
+            datos_finales = []
+
+            # Recorrer el diccionario y agregar los datos a la lista
+            for nivel, registros in self.datos.items():
+                for registro in registros:
+                    datos_finales.append({
+                        "Nivel": nivel,
+                        "Grados": registro["Grados"],
+                        "Torque": registro["Torque"],
+                        "Llegó": registro["Llegó"]
+                    })
+
+            print(f"Datos finales: {datos_finales}")  # Depuración
+
+            # Guardar los datos en un archivo Excel
+            expediente = self.app_interface.entry_02.get()
+            if expediente:
+                print(f"Expediente: {expediente}")  # Depuración
+
+                # Usar la carpeta seleccionada en AppInterface1
+                output_folder = self.app_interface.output_folder
+                output_path = output_folder / f"{expediente}.xlsx"
+
+                print(f"Ruta de salida: {output_path}")  # Depuración
+
+                # Crear un nuevo libro de Excel
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = "Resultados"
+
+                print("Libro de Excel creado.")  # Depuración
+
+                # Obtener los datos del paciente desde AppInterface1
+                nombre = self.app_interface.entry_00.get()
+                edad = self.app_interface.entry_01.get()
+                sexo = self.app_interface.combobox1.get()
+                actividad_fisica = self.app_interface.combobox2.get()  # Obtener la actividad física
+                fecha = "Fecha de prueba"  # Puedes agregar un campo para la fecha si es necesario
+
+                print(f"Datos del paciente: {nombre}, {edad}, {sexo}, {actividad_fisica}")  # Depuración
+
+                # Escribir la tabla de información personal
+                ws['A1'] = "Información Personal"
+                ws['A1'].font = Font(bold=True, size=14, color="FFFFFF")
+                ws['A1'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+                ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+                ws.merge_cells('A1:E1')  # Combinar celdas para el header (ahora son 5 columnas)
+
+                # Subheaders de la tabla de información personal
+                ws['A2'] = "Nombre"
+                ws['B2'] = "Edad"
+                ws['C2'] = "Sexo"
+                ws['D2'] = "Actividad Física"
+                ws['E2'] = "Fecha"
+                for cell in ws['A2:E2'][0]:
+                    cell.font = Font(bold=True, color="FFFFFF")
+                    cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+                # Datos de la tabla de información personal
+                ws['A3'] = nombre
+                ws['B3'] = edad
+                ws['C3'] = sexo
+                ws['D3'] = actividad_fisica  # Actividad física
+                ws['E3'] = fecha
+                for cell in ws['A3:E3'][0]:
+                    cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+                # Espacio entre las tablas
+                ws['A5'] = ""  # Espacio vacío
+
+                # Escribir la tabla de resumen de pruebas de fuerza
+                ws['A6'] = "Resumen de Pruebas de Fuerza"
+                ws['A6'].font = Font(bold=True, size=14, color="FFFFFF")
+                ws['A6'].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+                ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
+                ws.merge_cells('A6:D6')  # Combinar celdas para el header
+
+                # Subheaders de la tabla de resumen de pruebas de fuerza
+                ws['A7'] = "Nivel"
+                ws['B7'] = "Grados"
+                ws['C7'] = "Torque"
+                ws['D7'] = "Llegó"
+                for cell in ws['A7:D7'][0]:
+                    cell.font = Font(bold=True, color="FFFFFF")
+                    cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+                # Datos de la tabla de resumen de pruebas de fuerza
+                row_index = 8
+                for dato in datos_finales:
+                    ws[f'A{row_index}'] = dato["Nivel"]
+                    ws[f'B{row_index}'] = dato["Grados"]
+                    ws[f'C{row_index}'] = dato["Torque"]
+                    ws[f'D{row_index}'] = dato["Llegó"]
+                    for cell in ws[f'A{row_index}:D{row_index}'][0]:
+                        cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                    row_index += 1
+
+                print("Datos escritos en el archivo Excel.")  # Depuración
+
+                # Ajustar el ancho de las columnas (manejo seguro de celdas combinadas)
+                for col in ws.columns:
+                    max_length = 0
+                    # Obtener la letra de la columna de manera segura
+                    column_letter = get_column_letter(col[0].column)
+                    for cell in col:
+                        try:
+                            # Ignorar celdas combinadas
+                            if not isinstance(cell, openpyxl.cell.cell.MergedCell):
+                                if len(str(cell.value)) > max_length:
+                                    max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = (max_length + 2) * 1.2
+                    ws.column_dimensions[column_letter].width = adjusted_width
+
+                print("Ancho de columnas ajustado.")  # Depuración
+
+                # Guardar el archivo Excel
+                wb.save(output_path)
+                print(f"Archivo guardado en: {output_path}")  # Depuración
+
+                # Mostrar mensaje de éxito
+                messagebox.showinfo("Test Finalizado",
+                                    f"El registro y test ha concluido. Su archivo ha sido guardado como {output_path}.")
+            else:
+                print("Error: No se ingresó un número de expediente.")  # Depuración
+                messagebox.showwarning("Error", "Por favor, ingrese un número de expediente válido.")
+
+        except Exception as e:
+            print(f"Error en save_boton: {e}")  # Depuración
+            messagebox.showerror("Error", f"Ocurrió un error al guardar el archivo: {e}")
+
+        # Deshabilitar el botón de guardar y resetear la interfaz
         self.boton_save.config(state="disabled")
         self.user_input.config(state="disabled")
         self.squares[4].config(bg="#FFFFFF")
@@ -620,6 +729,13 @@ class AppInterface2:
         self.squares[1].config(bg="#FFFFFF")
         self.squares[0].config(bg="#FFFFFF")
         self.achieved_levels[:] = [False] * len(self.achieved_levels)
+        self.datos = {
+            "Nivel 1": [],
+            "Nivel 2": [],
+            "Nivel 3": [],
+            "Nivel 4": [],
+            "Nivel 5": []
+        }
 
     def start_animation(self):
         self.level1 = self.combobox.get()
@@ -766,7 +882,7 @@ class LegAnimation:
         )
 
         # Initialize with the first frame
-        self.update_frame(0,0)  # Start with position 0
+        self.update_frame(0, 0)  # Start with position 0
 
     def load_png_frames(self, image_folder_path):
         frames = []
@@ -799,6 +915,6 @@ class LegAnimation:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = AppInterface0(root)
+    app = AppInterface1(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
