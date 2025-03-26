@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 import serial.tools.list_ports
 import serial
 import os
+import json
 import math
 import time
 import openpyxl
@@ -28,9 +29,19 @@ def validate_number_input(new_value):
     except ValueError:
         return False
 
+
 # Permite llamar la imagen de un botón
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path) # La entrada es el nombre de la imagen como variable str
+
+
+def read_input_from_json(variable, filename="user_input.json"):
+    try:
+        with open(filename, "r") as file:
+            data = json.load(file)
+            return data.get(variable)  # Using .get() to avoid KeyError
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None  # File doesn't exist or is invalid
 
 
 """
@@ -44,6 +55,7 @@ class Controller:
     def __init__(self, root):
         self.root = root
         self.patient_data = {}  # Crea un diccionario vacío en el que se almacena la inf. del paciente
+        self.config_data = {}
         self.current_frame = None
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Enlaza el evento on_closing al protoc. de ventana
 
@@ -53,7 +65,7 @@ class Controller:
             self.current_frame.disconnect_arduino()  # Manda a llamar la función de desconexión dentro de cada ventana
         if self.current_frame:
             self.current_frame.pack_forget()  # Oculta la ventana actual
-        self.current_frame = new_frame_class(self.root, self, self.patient_data)
+        self.current_frame = new_frame_class(self.root, self, self.patient_data, self.config_data)
         self.current_frame.pack(fill="both", expand=True)
 
     """Controla el evento al cerrar ventana."""
@@ -70,12 +82,14 @@ class Controller:
 La clase de "AppBase" contiene el formato y colores que la interfaz necesita
 """
 
+
 class AppBase(tk.Frame):
-    def __init__(self, root, controller, patient_data):
+    def __init__(self, root, controller, patient_data, config_data):
         super().__init__(root)
         self.root = root
         self.controller = controller
         self.patient_data = patient_data  # Shared patient data
+        self.config_data = config_data
         self.used_color = 'white'
         self.text_color = "#3c3d40"
         self.connected_color = "#00487C"
@@ -91,9 +105,11 @@ Se reciben los datos del paciente
     * Establece la dirección del archivo a generar con los datos del estudio
 
 """
+
+
 class AppInterface0(AppBase):
-    def __init__(self, root, controller, patient_data):
-        super().__init__(root, controller, patient_data)
+    def __init__(self, root, controller, patient_data, config_data):
+        super().__init__(root, controller, patient_data, config_data)
         self.pack(fill="both", expand=True)
         self.dimension_x0 = "630"
         self.dimension_y0 = "550"
@@ -195,7 +211,9 @@ class AppInterface0(AppBase):
             self.canvas,
             image=self.settings_bg_image,
             relief="flat",
-            bg=self.used_color
+            bg=self.used_color,
+            command=lambda: self.controller.switch_frame(AppInterface01)
+
         )
         self.settings_button.place(x=544, y=476)
 
@@ -213,7 +231,7 @@ class AppInterface0(AppBase):
 
     """función que asigna la dirección del archivo"""
     def select_output_folder(self):
-        folder_selected = filedialog.askdirectory() # Abre un diálogo para seleccionar la carpeta de salida.
+        folder_selected = filedialog.askdirectory()  # Abre un diálogo para seleccionar la carpeta de salida.
         if folder_selected:
             self.output_folder = Path(folder_selected)
             self.patient_data["output_folder"] = self.output_folder  # Guardar la ruta en patient_data
@@ -238,13 +256,275 @@ class AppInterface0(AppBase):
 
 
 """
-# --------------------------------------- SEGUNDA VENTANA ----------------------------------------------- #
+# --------------------------------------- SEGUNDA VENTANA ----------------------------------------------------------- #
+Presenta las posibles configuraciones
+
+"""
+
+class AppInterface01(AppBase):
+    def __init__(self, root, controller, patient_data, config_data):
+        super().__init__(root, controller, patient_data, config_data)
+        self.pack(fill="both", expand=True)
+        self.dimension_x0 = "850"
+        self.dimension_y0 = "550"
+
+        self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
+        self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
+        self.x0 = (self.screen_width // 2) - (int(self.dimension_x0) // 2)  # Calcula la posición X
+        self.y0 = (self.screen_height // 2) - (int(self.dimension_y0) // 2)  # Calcula la posición Y
+        self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
+
+        self.root.resizable(False, False)
+        self.root.configure(bg=self.used_color)
+        self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
+        self.validate_func = self.canvas.register(validate_number_input)
+        self.init_widgets()
+        self.user_input_widgets()
+
+    def create_canvas(self, dimension_y, dimension_x):
+        canvas = tk.Canvas(self.root, bg=self.used_color, height=int(dimension_y), width=int(dimension_x), bd=0,
+                           highlightthickness=0, relief="ridge")
+        canvas.place(x=0, y=0)
+        return canvas
+
+    def save_input_to_json(self, value, variable, filename="user_input.json"):
+        # Load existing data if file exists
+        data = {}
+        if os.path.exists(filename):
+            try:
+                with open(filename, "r") as file:
+                    data = json.load(file)
+            except (FileNotFoundError, json.JSONDecodeError):
+                data = {}  # If file is corrupt, start fresh
+
+        # Update with new data
+        data[variable] = value
+
+        # Write back to file
+        with open(filename, "w") as file:
+            json.dump(data, file, indent=3)  # indent for pretty formatting
+
+    def init_widgets(self):
+        self.tit_st = tk.Label(self.canvas, text="Configuración", fg=self.text_color, font=("Inter", 30),
+                               bg=self.used_color)
+        self.tit_st.place(x=300.0, y=10.0, width=250)
+
+        self.go_back_bg_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
+        self.go_back_button = tk.Button(self.canvas, image=self.go_back_bg_image,
+                                        command=lambda: self.controller.switch_frame(AppInterface0), state="normal",
+                                        relief="flat", borderwidth=0, bg=self.used_color)
+        self.go_back_button.place(x=755.0, y=465.0)
+
+    def read_input_from_json(self, variable, filename="user_input.json"):
+        try:
+            with open(filename, "r") as file:
+                data = json.load(file)
+                return data.get(variable)  # Using .get() to avoid KeyError
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None  # File doesn't exist or is invalid
+
+    def save_config(self):
+        set1 = [self.sed_nv1_entry, self.sed_nv2_entry, self.sed_nv3_entry,
+                self.sed_nv4_entry, self.sed_nv5_entry, self.sed_time_entry]
+        set2 = [self.mod_nv1_entry, self.mod_nv2_entry, self.mod_nv3_entry,
+                self.mod_nv4_entry, self.mod_nv5_entry, self.mod_time_entry]
+        set3 = [self.dep_nv1_entry, self.dep_nv2_entry, self.dep_nv3_entry,
+                self.dep_nv4_entry, self.dep_nv5_entry, self.dep_time_entry]
+
+        set_matrix = [set1, set2, set3]
+        set_names = ["sed", "mod", "spor"]  # (JSON keys)
+
+        for set_name, row in zip(set_names, set_matrix):
+            for i, entry in enumerate(row, start=1):
+                value = entry.get().strip()  # Get and trim whitespace
+                key = f"{set_name}_nv{i}" if i <= 5 else f"{set_name}_time"  # Dynamic key naming
+
+                if not value:
+                    self.conform = self.read_input_from_json(key)
+                    self.save_input_to_json(self.conform, key)
+                else:
+                    self.save_input_to_json(value, key)
+
+        # Borra las entradas al terminar de almacenar los datos
+        for entry_set in [set1, set2, set3]:
+            for entry in entry_set:
+                entry.delete(0, "end")
+
+        configs = [
+            ('snv', 'sed_nv', 5), ('snvt', 'sed_time', 1),
+            ('mnv', 'mod_nv', 5), ('mnt', 'mod_time', 1),
+            ('pnv', 'dep_nv', 5), ('pnt', 'dep_time', 1)
+        ]
+
+        for prefix, json_prefix, count in configs:
+            for i in range(1, count + 1):
+                attr = f"{prefix}{i if count > 1 else ''}"
+                json_key = f"{json_prefix}{i if count > 1 else ''}"
+                getattr(self, attr).config(text=f"{read_input_from_json(json_key)}", fg=self.text_color, bg="#FFFFFF")
+
+    def user_input_widgets(self):
+
+        # Apartado de configuraciones para actividad sedentaria
+        self.sed_bg_image = PhotoImage(file=relative_to_assets("SED_BG.png"))
+        self.canvas.create_image(48, 76, image=self.sed_bg_image, anchor="nw")
+        self.text_sed_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
+        self.canvas.create_image(65, 119, image=self.text_sed_bg_image, anchor="nw")
+
+        self.sed_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv1_entry.place(x=199.0, y=140.0, width=50.0, height=20.0)
+        self.snv1 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv1')}", fg=self.text_color, font=("Inter", 11), justify="center",
+                             bg=self.used_color)
+        self.snv1.place(x=158, y=143)
+
+        self.sed_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv2_entry.place(x=199.0, y=178.0, width=50.0, height=20.0)
+        self.snv2 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv2')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snv2.place(x=158, y=178)
+
+        self.sed_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv3_entry.place(x=199.0, y=217.0, width=50.0, height=20.0)
+        self.snv3 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv3')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snv3.place(x=158, y=220)
+
+        self.sed_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv4_entry.place(x=199.0, y=264.0, width=50.0, height=20.0)
+        self.snv4 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv4')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snv4.place(x=158, y=269)
+
+        self.sed_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv5_entry.place(x=199.0, y=303.0, width=50.0, height=20.0)
+        self.snv5 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv5')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snv5.place(x=158, y=305)
+
+        self.sed_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_time_entry.place(x=199.0, y=387.0, width=50.0, height=20.0)
+        self.snvt = tk.Label(self.canvas, text=f"{read_input_from_json('sed_time')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snvt.place(x=158, y=389)
+
+        # Apartado de configuraciones para actividad moderada
+        self.mod_bg_image = PhotoImage(file=relative_to_assets("MOD_BG.png"))
+        self.canvas.create_image(306, 76, image=self.mod_bg_image, anchor="nw")
+        self.text_mod_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
+        self.canvas.create_image(326, 119, image=self.text_sed_bg_image, anchor="nw")
+
+        self.mod_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv1_entry.place(x=460.0, y=140.0, width=50.0, height=20.0)
+        self.mnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv1')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnv1.place(x=411, y=139)
+
+        self.mod_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv2_entry.place(x=460.0, y=178.0, width=50.0, height=20.0)
+        self.mnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv2')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnv2.place(x=411, y=177)
+
+        self.mod_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv3_entry.place(x=460.0, y=217.0, width=50.0, height=20.0)
+        self.mnv3 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv3')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnv3.place(x=411, y=217)
+
+        self.mod_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv4_entry.place(x=460.0, y=264.0, width=50.0, height=20.0)
+        self.mnv4 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv4')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnv4.place(x=411, y=266)
+
+        self.mod_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv5_entry.place(x=460.0, y=303.0, width=50.0, height=20.0)
+        self.mnv5 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv5')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnv5.place(x=411, y=304)
+
+        self.mod_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_time_entry.place(x=460.0, y=387.0, width=50.0, height=20.0)
+        self.mnt = tk.Label(self.canvas, text=f"{read_input_from_json('mod_time')}", fg=self.text_color,
+                            font=("Inter", 11), justify="center", bg=self.used_color)
+        self.mnt.place(x=411, y=387)
+
+        # Apartado de configuraciones para actividad deportiva
+        self.dep_bg_image = PhotoImage(file=relative_to_assets("SPOR_BG.png"))
+        self.canvas.create_image(565, 76, image=self.dep_bg_image, anchor="nw")
+        self.text_dep_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
+        self.canvas.create_image(582, 119, image=self.text_dep_bg_image, anchor="nw")
+
+        self.dep_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv1_entry.place(x=720.0, y=140.0, width=50.0, height=20.0)
+        self.pnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv1')}", fg=self.text_color, font=("Inter", 11), justify="center",
+                             bg=self.used_color)
+        self.pnv1.place(x=676, y=139)
+
+        self.dep_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv2_entry.place(x=720.0, y=178.0, width=50.0, height=20.0)
+        self.pnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv2')}", fg=self.text_color, font=("Inter", 11), justify="center",
+                             bg=self.used_color)
+        self.pnv2.place(x=676, y=177)
+
+        self.dep_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv3_entry.place(x=720.0, y=217.0, width=50.0, height=20.0)
+        self.pnv3 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv3')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.pnv3.place(x=676, y=217)
+
+        self.dep_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv4_entry.place(x=720.0, y=264.0, width=50.0, height=20.0)
+        self.pnv4 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv4')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.pnv4.place(x=676, y=266)
+
+        self.dep_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv5_entry.place(x=720.0, y=303.0, width=50.0, height=20.0)
+        self.pnv5 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv5')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.pnv5.place(x=676, y=304)
+
+        self.dep_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_time_entry.place(x=720.0, y=387.0, width=50.0, height=20.0)
+        self.pnt = tk.Label(self.canvas, text=f"{read_input_from_json('dep_time')}", fg=self.text_color,
+                            font=("Inter", 11), justify="center", bg=self.used_color)
+        self.pnt.place(x=676, y=387)
+
+        self.register_bg_image = PhotoImage(file=relative_to_assets("SAVE_ANGLE_BTN0_BG.png"))
+        self.save_config_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
+                                            command=self.save_config, state="normal", relief="flat",
+                                            borderwidth=0, bg=self.used_color,)
+        self.save_config_button.place(x=325.0, y=460.0)
+
+
+"""
+# --------------------------------------- TERCERA VENTANA ----------------------------------------------- #
 Presenta las modalidades: automática y manual
 
 """
+
+
 class AppInterface1(AppBase):
-    def __init__(self, root, controller, patient_data):
-        super().__init__(root, controller, patient_data)
+    def __init__(self, root, controller, patient_data, config_data):
+        super().__init__(root, controller, patient_data, config_data)
         self.pack(fill="both", expand=True)
         self.root = root
         self.dimension_x0 = "630"
@@ -305,8 +585,8 @@ Ventana que realiza el estudio automático
 
 """
 class AppInterface2(AppBase):
-    def __init__(self, root, controller, patient_data):
-        super().__init__(root, controller, patient_data)
+    def __init__(self, root, controller, patient_data, config_data):
+        super().__init__(root, controller, patient_data, config_data)
         self.columns = None
         self.column_dimensions = None
         self.position = None
@@ -547,12 +827,13 @@ class AppInterface2(AppBase):
     def send_value(self):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
+        guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
+        key_id = guide[0:2]
 
         if nivel <= 3:
-            print("safe")
-            cadena = str(self.combobox.get())
-            nivel = int(cadena.split()[1])
-            divided_value = nivel / 4
+            cadena = f"{key_id}_nv{nivel}"
+            final_value = read_input_from_json(cadena)
+            divided_value = final_value / 4
             cumulative_value = 0
 
             while self.send_value_running and cumulative_value < nivel:
@@ -709,8 +990,6 @@ class AppInterface2(AppBase):
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
         self.mensaje_label1.place(x=590, y=640)
-        self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label2.place(x=590, y=670)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#000000")
         self.strengthT_label.place(x=360, y=600)
@@ -833,35 +1112,32 @@ class AppInterface2(AppBase):
     def apply_combox_changes(self):
         self.level = self.combobox.get()
         self.value = self.user_input.get()
+        self.level_num = int(self.level.split(" ")[1])
+        guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
+        key_id = guide[0:2]
+        lvl4_max = read_input_from_json(f"{key_id}_nv4")
+        lvl5_max = read_input_from_json(f"{key_id}_nv5")
 
-        if self.level.startswith("Nivel "):
-            self.level_num = int(self.level.split(" ")[1])
+        if self.level_num == 4 and self.value.isdigit() and int(self.value) > lvl4_max:
+            self.mensaje_label1.config(text=f"Máx. {lvl4_max} N/m", fg="#00072d", bg="#FFFFFF")
+            return
+        elif self.level_num == 5 and self.value.isdigit() and int(self.value) > lvl5_max:
+            self.mensaje_label1.config(text=f"Máx. {lvl5_max} N/m", fg="#00072d", bg="#FFFFFF")
+            return
+        elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
+                                           or int(self.value) == 0):
+            self.mensaje_label1.config(text="ERROR. valor inválido", fg="#00072d", bg="#FFFFFF")
+            return
+        if not self.check_last_lvl(self.level_num):
+            return
 
-            if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#FFFFFF")
-                return
-            elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#FFFFFF")
-                return
-            elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
-                                               or int(self.value) == 0):
-                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#FFFFFF")
-                return
-            if not self.check_last_lvl(self.level_num):
-                return
-
-            self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
-            self.mensaje_label2.config(text="correctamente", fg="#00072D")
-            self.user_input.config(state="disabled")
-            self.boton_toggle.config(state="normal")
-            self.combobox.config(state="disabled")
-            self.max_angle_btn.config(state="normal")
+        self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
+        self.user_input.config(state="disabled")
+        self.boton_toggle.config(state="normal")
+        self.combobox.config(state="disabled")
+        self.max_angle_btn.config(state="normal")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
-        self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
 
     def auto_size_columns(ws):
@@ -1114,8 +1390,8 @@ class AppInterface2(AppBase):
 
 # --------------------------- Cuarta Interfaz --------------------------- #
 class AppInterface3(AppBase):
-    def __init__(self, root, controller, patient_data):
-        super().__init__(root, controller, patient_data)
+    def __init__(self, root, controller, patient_data, config_data):
+        super().__init__(root, controller, patient_data, config_data)
         self.updateMeterLine = None
         self.MeterWidget = None
         self.messagebox = None
@@ -1471,8 +1747,6 @@ class AppInterface3(AppBase):
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
         self.mensaje_label1.place(x=590, y=640)
-        self.mensaje_label2 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
-        self.mensaje_label2.place(x=590, y=670)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#404045")
         self.strengthT_label.place(x=360, y=600)
@@ -1593,28 +1867,23 @@ class AppInterface3(AppBase):
 
             if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
                 self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="es 10 en nivel 4", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
                 self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="es 20 en Nivel 5", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
                                                or int(self.value) == 0):
                 self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#FFFFFF")
-                self.mensaje_label2.config(text="de fuerza", fg="#00072d", bg="#FFFFFF")
                 return
             if not self.check_last_lvl(self.level_num):
                 return
 
             self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
-            self.mensaje_label2.config(text="correctamente", fg="#00072D")
             self.user_input.config(state="disabled")
             self.combobox.config(state="disabled")
             self.boton_toggle.config(state="normal")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
-        self.mensaje_label2.after(5000, lambda: self.mensaje_label2.config(text=""))
 
     def update_frame(self, position, torque):
         """Actualiza los datos de grados y torque."""
