@@ -45,11 +45,16 @@ def read_input_from_json(variable, filename="user_input.json"):
 
 
 """
+########################################################################################################################
+
 La clase de "Controller" tiene la tarea de realizar las sig. funciones
     * Permite el cambio entre ventanas de la aplicación
     * Declara las acciones de seguridad necesarias al cambiar y cerrar ventanas
     * Declara las variables de inf. del usuario que se comparten con las demas ventanas
+    
+########################################################################################################################
 """
+
 
 class Controller:
     def __init__(self, root):
@@ -79,7 +84,10 @@ class Controller:
 
 
 """
+########################################################################################################################
 La clase de "AppBase" contiene el formato y colores que la interfaz necesita
+
+########################################################################################################################
 """
 
 
@@ -99,11 +107,12 @@ class AppBase(tk.Frame):
 
 
 """
-# --------------------------------------- PRIMERA VENTANA ----------------------------------------------- #
+############################################ PRIMERA VENTANA ###########################################################
 Se reciben los datos del paciente
     * Ingresa: nombre, # de expediente, edad, sexo. act. física y fecha
     * Establece la dirección del archivo a generar con los datos del estudio
 
+########################################################################################################################
 """
 
 
@@ -229,16 +238,16 @@ class AppInterface0(AppBase):
         )
         self.select_folder_button.place(x=400, y=386)
 
-    """función que asigna la dirección del archivo"""
     def select_output_folder(self):
+        """función que asigna la dirección del archivo"""
         folder_selected = filedialog.askdirectory()  # Abre un diálogo para seleccionar la carpeta de salida.
         if folder_selected:
             self.output_folder = Path(folder_selected)
             self.patient_data["output_folder"] = self.output_folder  # Guardar la ruta en patient_data
             messagebox.showinfo("Carpeta seleccionada", f"Los archivos se guardarán en: {self.output_folder}")
 
-    """Guarda la información y cambia de interfaz."""
     def save_and_next(self):
+        """Guarda la información y cambia de interfaz."""
         self.patient_data["Nombre"] = self.entry_00.get()
         self.patient_data["Edad"] = self.entry_01.get()
         self.patient_data["Sexo"] = self.combobox1.get()
@@ -246,9 +255,11 @@ class AppInterface0(AppBase):
         self.patient_data["Expediente"] = self.entry_02.get()
         # self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
 
+        """"
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
             return
+        """
         self.controller.switch_frame(AppInterface1)
 
     def error_message(self):
@@ -256,10 +267,12 @@ class AppInterface0(AppBase):
 
 
 """
-# --------------------------------------- SEGUNDA VENTANA ----------------------------------------------------------- #
+############################################ SEGUNDA VENTANA ###########################################################
 Presenta las posibles configuraciones
 
+########################################################################################################################
 """
+
 
 class AppInterface01(AppBase):
     def __init__(self, root, controller, patient_data, config_data):
@@ -516,9 +529,10 @@ class AppInterface01(AppBase):
 
 
 """
-# --------------------------------------- TERCERA VENTANA ----------------------------------------------- #
-Presenta las modalidades: automática y manual
+############################################## TERCERA VENTANA #########################################################
+Presenta las modalidades: AUTOMÁTICO Y MANUAL
 
+########################################################################################################################
 """
 
 
@@ -580,10 +594,13 @@ class AppInterface1(AppBase):
 
 
 """
-# --------------------------------------- TERCERA VENTANA ----------------------------------------------- #
-Ventana que realiza el estudio automático
+############################################## CUARTA VENTANA #########################################################
+Ventana que realiza el estudio AUTOMÁTICO
 
+########################################################################################################################
 """
+
+
 class AppInterface2(AppBase):
     def __init__(self, root, controller, patient_data, config_data):
         super().__init__(root, controller, patient_data, config_data)
@@ -756,8 +773,10 @@ class AppInterface2(AppBase):
 
     """Inicialización de temporizador"""
     def start_timer(self):
+        guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
+        key_id = guide[0:3]
         if not self.running:
-            self.time_left = 10  # Asigna la duración del temporizador
+            self.time_left = int(read_input_from_json(f"{key_id}_time"))  # Asigna la duración del temporizador
             self.running = True
             self.message_shown = False
             self.update_timer()
@@ -828,15 +847,16 @@ class AppInterface2(AppBase):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
-        key_id = guide[0:2]
+        key_id = guide[0:3]
 
         if nivel <= 3:
             cadena = f"{key_id}_nv{nivel}"
-            final_value = read_input_from_json(cadena)
+            print(cadena)
+            final_value = int(read_input_from_json(cadena))
             divided_value = final_value / 4
             cumulative_value = 0
 
-            while self.send_value_running and cumulative_value < nivel:
+            while self.send_value_running and cumulative_value < final_value:
                 cumulative_value += divided_value
                 if self.ser and self.ser.is_open:  # Ensure the serial port is open
                     self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
@@ -854,7 +874,7 @@ class AppInterface2(AppBase):
                 time.sleep(2)  # Wait for 2 seconds before the next iteration
 
             # When max torque is reached
-            if cumulative_value >= nivel:
+            if cumulative_value >= final_value:
                 self.max_torque_reached = True
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
                 self.start_timer()
@@ -1112,30 +1132,31 @@ class AppInterface2(AppBase):
     def apply_combox_changes(self):
         self.level = self.combobox.get()
         self.value = self.user_input.get()
-        self.level_num = int(self.level.split(" ")[1])
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
-        key_id = guide[0:2]
-        lvl4_max = read_input_from_json(f"{key_id}_nv4")
-        lvl5_max = read_input_from_json(f"{key_id}_nv5")
+        key_id = guide[0:3]
+        lvl4_max = int(read_input_from_json(f"{key_id}_nv4"))
+        lvl5_max = int(read_input_from_json(f"{key_id}_nv5"))
+        if self.level.startswith("Nivel "):
+            self.level_num = int(self.level.split(" ")[1])
 
-        if self.level_num == 4 and self.value.isdigit() and int(self.value) > lvl4_max:
-            self.mensaje_label1.config(text=f"Máx. {lvl4_max} N/m", fg="#00072d", bg="#FFFFFF")
-            return
-        elif self.level_num == 5 and self.value.isdigit() and int(self.value) > lvl5_max:
-            self.mensaje_label1.config(text=f"Máx. {lvl5_max} N/m", fg="#00072d", bg="#FFFFFF")
-            return
-        elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
-                                           or int(self.value) == 0):
-            self.mensaje_label1.config(text="ERROR. valor inválido", fg="#00072d", bg="#FFFFFF")
-            return
-        if not self.check_last_lvl(self.level_num):
-            return
+            if self.level_num == 4 and self.value.isdigit() and int(self.value) > lvl4_max:
+                self.mensaje_label1.config(text=f"ERROR: Máx. {lvl4_max} N/m", fg="#00072d", bg="#FFFFFF")
+                return
+            elif self.level_num == 5 and self.value.isdigit() and int(self.value) > lvl5_max:
+                self.mensaje_label1.config(text=f"ERROR: Máx. {lvl5_max} N/m", fg="#00072d", bg="#FFFFFF")
+                return
+            elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
+                                               or int(self.value) == 0):
+                self.mensaje_label1.config(text="ERROR: valor inválido", fg="#00072d", bg="#FFFFFF")
+                return
+            if not self.check_last_lvl(self.level_num):
+                return
 
-        self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
-        self.user_input.config(state="disabled")
-        self.boton_toggle.config(state="normal")
-        self.combobox.config(state="disabled")
-        self.max_angle_btn.config(state="normal")
+            self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
+            self.user_input.config(state="disabled")
+            self.boton_toggle.config(state="normal")
+            self.combobox.config(state="disabled")
+            self.max_angle_btn.config(state="normal")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
 
@@ -1388,7 +1409,14 @@ class AppInterface2(AppBase):
         self.root.destroy()
 
 
-# --------------------------- Cuarta Interfaz --------------------------- #
+"""
+############################################## QUINTA VENTANA ##########################################################
+Ventana que realiza el estudio MANUAL
+
+########################################################################################################################
+"""
+
+
 class AppInterface3(AppBase):
     def __init__(self, root, controller, patient_data, config_data):
         super().__init__(root, controller, patient_data, config_data)
@@ -1591,15 +1619,16 @@ class AppInterface3(AppBase):
     def send_value(self):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
+        guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
+        key_id = guide[0:3]
 
         if nivel <= 3:
-            print("safe")
-            cadena = str(self.combobox.get())
-            nivel = int(cadena.split()[1])
-            divided_value = nivel / 4
+            cadena = f"{key_id}_nv{nivel}"
+            final_value = int(read_input_from_json(cadena))
+            divided_value = final_value / 4
             cumulative_value = 0
 
-            while self.send_value_running and cumulative_value < nivel:
+            while self.send_value_running and cumulative_value < final_value:
                 cumulative_value += divided_value
                 if self.ser and self.ser.is_open:  # Ensure the serial port is open
                     self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
@@ -1617,7 +1646,7 @@ class AppInterface3(AppBase):
                 time.sleep(2)  # Wait for 2 seconds before the next iteration
 
             # When max torque is reached
-            if cumulative_value >= nivel:
+            if cumulative_value >= final_value:
                 self.max_torque_reached = True
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
 
@@ -1861,27 +1890,30 @@ class AppInterface3(AppBase):
     def apply_combox_changes(self):
         self.level = self.combobox.get()
         self.value = self.user_input.get()
-
+        guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
+        key_id = guide[0:3]
+        lvl4_max = int(read_input_from_json(f"{key_id}_nv4"))
+        lvl5_max = int(read_input_from_json(f"{key_id}_nv5"))
         if self.level.startswith("Nivel "):
             self.level_num = int(self.level.split(" ")[1])
 
-            if self.level_num == 4 and self.value.isdigit() and int(self.value) > 10:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+            if self.level_num == 4 and self.value.isdigit() and int(self.value) > lvl4_max:
+                self.mensaje_label1.config(text=f"ERROR: Máx. {lvl4_max} N/m", fg="#00072d", bg="#FFFFFF")
                 return
-            elif self.level_num == 5 and self.value.isdigit() and int(self.value) > 20:
-                self.mensaje_label1.config(text="El límite del valor", fg="#00072d", bg="#FFFFFF")
+            elif self.level_num == 5 and self.value.isdigit() and int(self.value) > lvl5_max:
+                self.mensaje_label1.config(text=f"ERROR: Máx. {lvl5_max} N/m", fg="#00072d", bg="#FFFFFF")
                 return
             elif self.level_num in (4, 5) and ((not self.value.strip() or not self.value.isdigit())
                                                or int(self.value) == 0):
-                self.mensaje_label1.config(text="ERROR. Ingrese un valor", fg="#00072d", bg="#FFFFFF")
+                self.mensaje_label1.config(text="ERROR: valor inválido", fg="#00072d", bg="#FFFFFF")
                 return
             if not self.check_last_lvl(self.level_num):
                 return
 
             self.mensaje_label1.config(text="Cambios aplicados", fg="#00072D")
             self.user_input.config(state="disabled")
-            self.combobox.config(state="disabled")
             self.boton_toggle.config(state="normal")
+            self.combobox.config(state="disabled")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
 
@@ -2133,7 +2165,14 @@ class AppInterface3(AppBase):
         self.root.destroy()
 
 
-# --------------------------- Imagen de pierna --------------------------- #
+"""
+############################################## SEXTA VENTANA ###########################################################
+Función que controla la imagen de la pierna
+
+########################################################################################################################
+"""
+
+
 class LegAnimation:
     def __init__(self, canvas, image_folder_path):
         self.canvas = canvas
