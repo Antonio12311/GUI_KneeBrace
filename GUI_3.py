@@ -13,11 +13,11 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.chart import BarChart, Reference
 
-
 # Dirección de carpeta que contiene las imagenes de los botones
 _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
 ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
+
 
 # Evita que se ingresen valores no númericos a la entrada de edad
 def validate_number_input(new_value):
@@ -32,7 +32,7 @@ def validate_number_input(new_value):
 
 # Permite llamar la imagen de un botón
 def relative_to_assets(path: str) -> Path:
-    return ASSETS_PATH / Path(path) # La entrada es el nombre de la imagen como variable str
+    return ASSETS_PATH / Path(path)  # La entrada es el nombre de la imagen como variable str
 
 
 def read_input_from_json(variable, filename="user_input.json"):
@@ -65,6 +65,7 @@ class Controller:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Enlaza el evento on_closing al protoc. de ventana
 
     """Cambio entre ventanas."""
+
     def switch_frame(self, new_frame_class):
         if hasattr(self.current_frame, 'disconnect_arduino'):
             self.current_frame.disconnect_arduino()  # Manda a llamar la función de desconexión dentro de cada ventana
@@ -74,6 +75,7 @@ class Controller:
         self.current_frame.pack(fill="both", expand=True)
 
     """Controla el evento al cerrar ventana."""
+
     def on_closing(self):
         if hasattr(self.current_frame, 'turn_off_motor'):
             self.current_frame.turn_off_motor()  # Encuentra y activa función de apagado del motor
@@ -136,6 +138,7 @@ class AppInterface0(AppBase):
         self.init_widgets()
 
     """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
+
     def create_canvas(self, dimension_y, dimension_x):
         canvas = tk.Canvas(
             self.root,
@@ -150,9 +153,11 @@ class AppInterface0(AppBase):
         return canvas
 
     """Botones de la página número 0"""
+
     def init_widgets(self):
         # Titulo
-        self.canvas.create_text(90, 25, anchor="nw", text="Registro de paciente", fill=self.text_color, font=("Inter", 30))
+        self.canvas.create_text(90, 25, anchor="nw", text="Registro de paciente", fill=self.text_color,
+                                font=("Inter", 30))
 
         # Nombre del paciente
         self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
@@ -211,7 +216,7 @@ class AppInterface0(AppBase):
         self.register_bg_image = PhotoImage(file=relative_to_assets("SWITCH_BTN_BG.png"))
         self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                        command=self.save_and_next, state="normal", relief="flat",
-                                       borderwidth=0, bg=self.used_color,)
+                                       borderwidth=0, bg=self.used_color, )
         self.switch_button.place(x=224.0, y=476.0)
 
         # Botón a página de ajustes
@@ -345,7 +350,7 @@ class AppInterface01(AppBase):
                 self.dep_nv4_entry, self.dep_nv5_entry, self.dep_time_entry]
 
         set_matrix = [set1, set2, set3]
-        set_names = ["sed", "mod", "spor"]  # (JSON keys)
+        set_names = ["sed", "mod", "dep"]  # (JSON keys)
 
         for set_name, row in zip(set_names, set_matrix):
             for i, entry in enumerate(row, start=1):
@@ -355,6 +360,9 @@ class AppInterface01(AppBase):
                 if not value:
                     self.conform = self.read_input_from_json(key)
                     self.save_input_to_json(self.conform, key)
+                elif int(value) >= 18:
+                    messagebox.showwarning("Error", "La potencia nominal del motor es 18 N/m, \n"
+                                                    "ingrese un valor menor")
                 else:
                     self.save_input_to_json(value, key)
 
@@ -386,7 +394,8 @@ class AppInterface01(AppBase):
         self.sed_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
         self.sed_nv1_entry.place(x=199.0, y=140.0, width=50.0, height=20.0)
-        self.snv1 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv1')}", fg=self.text_color, font=("Inter", 11), justify="center",
+        self.snv1 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv1')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center",
                              bg=self.used_color)
         self.snv1.place(x=158, y=143)
 
@@ -482,14 +491,16 @@ class AppInterface01(AppBase):
         self.dep_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
         self.dep_nv1_entry.place(x=720.0, y=140.0, width=50.0, height=20.0)
-        self.pnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv1')}", fg=self.text_color, font=("Inter", 11), justify="center",
+        self.pnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv1')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center",
                              bg=self.used_color)
         self.pnv1.place(x=676, y=139)
 
         self.dep_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
         self.dep_nv2_entry.place(x=720.0, y=178.0, width=50.0, height=20.0)
-        self.pnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv2')}", fg=self.text_color, font=("Inter", 11), justify="center",
+        self.pnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv2')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center",
                              bg=self.used_color)
         self.pnv2.place(x=676, y=177)
 
@@ -524,7 +535,7 @@ class AppInterface01(AppBase):
         self.register_bg_image = PhotoImage(file=relative_to_assets("SAVE_ANGLE_BTN0_BG.png"))
         self.save_config_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                             command=self.save_config, state="normal", relief="flat",
-                                            borderwidth=0, bg=self.used_color,)
+                                            borderwidth=0, bg=self.used_color, )
         self.save_config_button.place(x=325.0, y=460.0)
 
 
@@ -576,7 +587,7 @@ class AppInterface1(AppBase):
         self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
                                        command=lambda: self.controller.switch_frame(AppInterface3), state="normal",
                                        relief="flat",
-                                       borderwidth=0, bg=self.used_color,)
+                                       borderwidth=0, bg=self.used_color, )
         self.manual_button.place(x=97.0, y=198.0)
 
         self.canvas.create_text(405, 370, anchor="nw", text="AUTOMÁTICO", fill=self.text_color, font=("Inter", 14))
@@ -657,7 +668,7 @@ class AppInterface2(AppBase):
         self.leg_animation = LegAnimation(self.canvas, self.frames_path)
         self.init_widgets()
 
-    def create_canvas(self,dimension_x, dimension_y):
+    def create_canvas(self, dimension_x, dimension_y):
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -679,7 +690,7 @@ class AppInterface2(AppBase):
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN0.png"))
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN0.png"))
 
-        self.toggle_connection_button = Button( #Botón de conexión
+        self.toggle_connection_button = Button(  # Botón de conexión
             self.canvas,
             image=self.connect_button_image,
             command=self.toggle_connection,
@@ -689,6 +700,7 @@ class AppInterface2(AppBase):
         self.toggle_connection_button.place(x=70, y=550)
 
     """Cambia el estado de la conexión"""
+
     def toggle_connection(self):
         if self.is_connected:
             self.disconnect_arduino()
@@ -696,6 +708,7 @@ class AppInterface2(AppBase):
             self.connect_to_arduino()
 
     """Selección automáticadel  puerto conectado a Arduino"""
+
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
@@ -704,6 +717,7 @@ class AppInterface2(AppBase):
         return None
 
     """Lectura de datos seriales y cambbio de posición de animación"""
+
     def read_serial_port(self):
         try:
             while not self.stop_threads:
@@ -732,6 +746,7 @@ class AppInterface2(AppBase):
             self.stop_threads = True
 
     """Conexión a arduino e inicialización de threads de lectura"""
+
     def connect_to_arduino(self):
         arduino_port = self.find_arduino_port()
         if arduino_port:
@@ -739,7 +754,8 @@ class AppInterface2(AppBase):
                 try:
                     self.arduino_lock = threading.Lock()
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
-                    self.status_label.config(text=f"Conectado a: {arduino_port}", fg=self.connected_color, font=("Inter", 12))
+                    self.status_label.config(text=f"Conectado a: {arduino_port}", fg=self.connected_color,
+                                             font=("Inter", 12))
                     self.toggle_connection_button.config(image=self.disconnect_button_image)
                     self.combobox.config(state="normal")
                     self.apply_button_widget.config(state="normal")
@@ -758,6 +774,7 @@ class AppInterface2(AppBase):
             messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
 
     """Desconexión de arduino y detención de threads de lectura"""
+
     def disconnect_arduino(self):
         self.turn_off_motor()
         if self.ser and self.ser.is_open:
@@ -772,6 +789,7 @@ class AppInterface2(AppBase):
             self.stop_threads = False
 
     """Inicialización de temporizador"""
+
     def start_timer(self):
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
         key_id = guide[0:3]
@@ -782,12 +800,14 @@ class AppInterface2(AppBase):
             self.update_timer()
 
     """Detiene el temporizador"""
+
     def stop_timer(self):
         if self.running:
             self.time_left = 0  # Termina el temporizador
             self.running = False
 
     """Actualiza el temporizador y determina el resultado del estudio"""
+
     def update_timer(self):
         if not self.running:
             return
@@ -817,6 +837,7 @@ class AppInterface2(AppBase):
             self.message_shown = True
 
     """ Lógica ejecutada con el botón iniciar. """
+
     def toggle_boton(self):
         if self.boton_toggle["text"] == "Iniciar":
             # Se cambia la imagen del botón y se inicializa la animación del indicador y el envío de datos seriales
@@ -843,6 +864,7 @@ class AppInterface2(AppBase):
                 self.achieved_levels[level_num - 1] = False
 
     """ Envío de datos seriales """
+
     def send_value(self):
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
@@ -908,6 +930,7 @@ class AppInterface2(AppBase):
                 self.start_timer()
 
     """ Inicia la animación de barra, enciende el motor e inicia el envío de datos seriales """
+
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
         self.start_animation()
@@ -989,7 +1012,8 @@ class AppInterface2(AppBase):
 
     def create_combo_widget(self):
         # Title
-        self.canvas.create_text(350, 10, anchor="nw", text="Estudio automático", fill=self.text_color, font=("Inter", 30))
+        self.canvas.create_text(350, 10, anchor="nw", text="Estudio automático", fill=self.text_color,
+                                font=("Inter", 30))
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
         self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Inter", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
@@ -1003,7 +1027,7 @@ class AppInterface2(AppBase):
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
-        self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,command=self.apply_combox_changes,
+        self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image, command=self.apply_combox_changes,
                                              relief="flat", borderwidth=0, bg=self.used_color)
         self.apply_button_widget.place(x=350, y=640)
         self.apply_button_widget.config(state="disabled")
@@ -1016,7 +1040,7 @@ class AppInterface2(AppBase):
         self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#000000")
         self.strengthKG_label.place(x=540, y=600)
 
-        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza",font=("Inter", 13),
+        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13),
                                                       fill=self.text_color)
 
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
@@ -1027,17 +1051,17 @@ class AppInterface2(AppBase):
                                     relief="flat", borderwidth=0, bg=self.used_color)
         self.origin_btn.place(x=735.0, y=160.0)
 
-        self.max_angle_text=self.canvas.create_text(810, 270, text="Ángulo máx.:  0.0 °", font=("Inter", 12),
-                                                    fill=self.text_color)
+        self.max_angle_text = self.canvas.create_text(810, 270, text="Ángulo máx.:  0.0 °", font=("Inter", 12),
+                                                      fill=self.text_color)
 
         self.save_angle_bg = PhotoImage(file=relative_to_assets("SAVE_ANGLE_BTN0_BG.png"))
 
         self.max_angle_btn = tk.Button(self.canvas, image=self.save_angle_bg, command=self.save_max_angle,
-                                            relief="flat", borderwidth=0, bg=self.used_color)
+                                       relief="flat", borderwidth=0, bg=self.used_color)
         self.max_angle_btn.place(x=735.0, y=284.0)
         self.max_angle_btn.config(state="disabled")
 
-        self.label_timer = tk.Label(root, text="00:00", font=("Inter", 12),bg=self.used_color)
+        self.label_timer = tk.Label(root, text="00:00", font=("Inter", 12), bg=self.used_color)
         self.label_timer.place(x=740.0, y=385.0)
 
         self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
@@ -1066,7 +1090,6 @@ class AppInterface2(AppBase):
 
         self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN0.png"))
         self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN0.png"))
-
 
         self.save_image = PhotoImage(file=relative_to_assets("SAVE_BTN0.png"))
         self.boton_save = tk.Button(
@@ -1103,7 +1126,6 @@ class AppInterface2(AppBase):
             self.max_angle = self.position
         else:
             messagebox.showinfo("Error", "No se detecta posición, verifique el sistema")
-
 
     def achieved_test(self, color):
         nivel_actual = self.combobox.get()
@@ -1159,7 +1181,6 @@ class AppInterface2(AppBase):
             self.max_angle_btn.config(state="normal")
 
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
-
 
     def auto_size_columns(ws):
         """
@@ -1300,7 +1321,8 @@ class AppInterface2(AppBase):
         ws['B3'] = self.patient_data.get("Edad", "No registrado")
         ws['C3'] = self.patient_data.get("Sexo", "No registrado")
         ws['D3'] = self.patient_data.get("Actividad", "No registrado")
-        ws['E3'] = self.patient_data.get("Fecha de prueba", "No registrado")  # Puedes agregar un campo para la fecha si es necesario
+        ws['E3'] = self.patient_data.get("Fecha de prueba",
+                                         "No registrado")  # Puedes agregar un campo para la fecha si es necesario
         ws['F3'] = self.max_angle
         for cell in ws['A3:F3'][0]:
             cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
@@ -1475,7 +1497,7 @@ class AppInterface3(AppBase):
         self.leg_animation = LegAnimation(self.canvas, self.frames_path)
         self.init_widgets()
 
-    def create_canvas(self,dimension_x, dimension_y):
+    def create_canvas(self, dimension_x, dimension_y):
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -1496,7 +1518,6 @@ class AppInterface3(AppBase):
 
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN0.png"))
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN0.png"))
-
 
         self.toggle_connection_button = Button(
             self.canvas,
@@ -1562,7 +1583,8 @@ class AppInterface3(AppBase):
                 try:
                     self.arduino_lock = threading.Lock()
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
-                    self.status_label.config(text=f"Conectado a: {arduino_port}", fg=self.connected_color, font=("Inter", 12))
+                    self.status_label.config(text=f"Conectado a: {arduino_port}", fg=self.connected_color,
+                                             font=("Inter", 12))
                     self.toggle_connection_button.config(image=self.disconnect_button_image)
                     self.combobox.config(state="normal")
                     self.apply_button_widget.config(state="normal")
@@ -1677,8 +1699,6 @@ class AppInterface3(AppBase):
                 self.max_torque_reached = True
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
 
-
-
     def animation_on_write_serial(self):
         self.combobox.config(state="disabled")
         self.start_animation()
@@ -1782,7 +1802,7 @@ class AppInterface3(AppBase):
         self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#404045")
         self.strengthKG_label.place(x=540, y=600)
 
-        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza",font=("Inter", 13),
+        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13),
                                                       fill=self.text_color)
 
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
@@ -1832,7 +1852,6 @@ class AppInterface3(AppBase):
         self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN0.png"))
         self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN0.png"))
 
-
         self.save_image = PhotoImage(file=relative_to_assets("SAVE_BTN0.png"))
         self.boton_save = tk.Button(
             self.canvas,
@@ -1855,7 +1874,7 @@ class AppInterface3(AppBase):
             relief="flat",
             borderwidth=0,
             bg=self.used_color,
-            )
+        )
         self.boton_toggle.place(x=734, y=410)
         self.boton_toggle.config(state="disabled")
 
@@ -2053,7 +2072,8 @@ class AppInterface3(AppBase):
         ws['B3'] = self.patient_data.get("Edad", "No registrado")
         ws['C3'] = self.patient_data.get("Sexo", "No registrado")
         ws['D3'] = self.patient_data.get("Actividad", "No registrado")
-        ws['E3'] = self.patient_data.get("Fecha de prueba", "No registrado")  # Puedes agregar un campo para la fecha si es necesario
+        ws['E3'] = self.patient_data.get("Fecha de prueba",
+                                         "No registrado")  # Puedes agregar un campo para la fecha si es necesario
         for cell in ws['A3:E3'][0]:
             cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
             cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -2200,7 +2220,7 @@ class LegAnimation:
         )
 
         # Initialize with the first frame
-        self.update_frame(0,0)  # Start with position 0
+        self.update_frame(0, 0)  # Start with position 0
 
     def load_png_frames(self, image_folder_path):
         frames = []
