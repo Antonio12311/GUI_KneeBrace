@@ -156,8 +156,8 @@ class AppInterface0(AppBase):
 
     def init_widgets(self):
         # Titulo
-        self.canvas.create_text(90, 25, anchor="nw", text="Registro de paciente", fill=self.text_color,
-                                font=("Inter", 30))
+        self.canvas.create_text(140, 40, anchor="w", text="Registro de paciente", fill=self.text_color,
+                                font=("Inter", 30), width=400)
 
         # Nombre del paciente
         self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
@@ -217,7 +217,7 @@ class AppInterface0(AppBase):
         self.switch_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
                                        command=self.save_and_next, state="normal", relief="flat",
                                        borderwidth=0, bg=self.used_color, )
-        self.switch_button.place(x=224.0, y=476.0)
+        self.switch_button.place(x=224.0, y=460.0)
 
         # Botón a página de ajustes
         self.settings_bg_image = PhotoImage(file=relative_to_assets("COG_BG.png"))
@@ -229,7 +229,7 @@ class AppInterface0(AppBase):
             command=lambda: self.controller.switch_frame(AppInterface01)
 
         )
-        self.settings_button.place(x=544, y=476)
+        self.settings_button.place(x=544, y=460)
 
         # Selección de dirección del archivo
         self.select_bg_image = PhotoImage(file=relative_to_assets("SELECT_BG_IMAGE.png"))
@@ -241,7 +241,7 @@ class AppInterface0(AppBase):
             state="normal",
             bg=self.used_color
         )
-        self.select_folder_button.place(x=400, y=386)
+        self.select_folder_button.place(x=385, y=386)
 
     def select_output_folder(self):
         """función que asigna la dirección del archivo"""
@@ -387,150 +387,149 @@ class AppInterface01(AppBase):
 
         # Apartado de configuraciones para actividad sedentaria
         self.sed_bg_image = PhotoImage(file=relative_to_assets("SED_BG.png"))
-        self.canvas.create_image(48, 76, image=self.sed_bg_image, anchor="nw")
+        self.canvas.create_image(18, 78, image=self.sed_bg_image, anchor="nw")
         self.text_sed_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
-        self.canvas.create_image(65, 119, image=self.text_sed_bg_image, anchor="nw")
+        self.canvas.create_image(40, 120, image=self.text_sed_bg_image, anchor="nw")
 
+        self.snv1 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv1')}", fg=self.text_color,
+                             font=("Inter", 11), justify="center", bg=self.used_color)
+        self.snv1.place(x=150, y=140, width=30)
         self.sed_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_nv1_entry.place(x=199.0, y=140.0, width=50.0, height=20.0)
-        self.snv1 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv1')}", fg=self.text_color,
-                             font=("Inter", 11), justify="center",
-                             bg=self.used_color)
-        self.snv1.place(x=158, y=143)
+        self.sed_nv1_entry.place(x=215.0, y=140.0, width=50.0, height=20.0)
 
-        self.sed_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_nv2_entry.place(x=199.0, y=178.0, width=50.0, height=20.0)
         self.snv2 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv2')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.snv2.place(x=158, y=178)
-
-        self.sed_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.snv2.place(x=150, y=178, width=30)
+        self.sed_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_nv3_entry.place(x=199.0, y=217.0, width=50.0, height=20.0)
+        self.sed_nv2_entry.place(x=215.0, y=178.0, width=50.0, height=20.0)
+
         self.snv3 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv3')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.snv3.place(x=158, y=220)
-
-        self.sed_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.snv3.place(x=150, y=220, width=30)
+        self.sed_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_nv4_entry.place(x=199.0, y=264.0, width=50.0, height=20.0)
+        self.sed_nv3_entry.place(x=215, y=217.0, width=50.0, height=20.0)
+
         self.snv4 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv4')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.snv4.place(x=158, y=269)
-
-        self.sed_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.snv4.place(x=150, y=269, width=30)
+        self.sed_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_nv5_entry.place(x=199.0, y=303.0, width=50.0, height=20.0)
+        self.sed_nv4_entry.place(x=215.0, y=264.0, width=50.0, height=20.0)
+
         self.snv5 = tk.Label(self.canvas, text=f"{read_input_from_json('sed_nv5')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.snv5.place(x=158, y=305)
+        self.snv5.place(x=150, y=305, width=30)
+        self.sed_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_nv5_entry.place(x=215.0, y=303.0, width=50.0, height=20.0)
 
-        self.sed_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.sed_time_entry.place(x=199.0, y=387.0, width=50.0, height=20.0)
         self.snvt = tk.Label(self.canvas, text=f"{read_input_from_json('sed_time')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.snvt.place(x=158, y=389)
+        self.snvt.place(x=150, y=389, width=30)
+        self.sed_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.sed_time_entry.place(x=215.0, y=387.0, width=50.0, height=20.0)
 
         # Apartado de configuraciones para actividad moderada
         self.mod_bg_image = PhotoImage(file=relative_to_assets("MOD_BG.png"))
-        self.canvas.create_image(306, 76, image=self.mod_bg_image, anchor="nw")
+        self.canvas.create_image(298, 78, image=self.mod_bg_image, anchor="nw")
         self.text_mod_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
-        self.canvas.create_image(326, 119, image=self.text_sed_bg_image, anchor="nw")
+        self.canvas.create_image(317, 120, image=self.text_sed_bg_image, anchor="nw")
 
-        self.mod_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_nv1_entry.place(x=460.0, y=140.0, width=50.0, height=20.0)
         self.mnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv1')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnv1.place(x=411, y=139)
-
-        self.mod_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.mnv1.place(x=427, y=140, width=30)
+        self.mod_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_nv2_entry.place(x=460.0, y=178.0, width=50.0, height=20.0)
+        self.mod_nv1_entry.place(x=492.0, y=140.0, width=50.0, height=20.0)
+
         self.mnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv2')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnv2.place(x=411, y=177)
-
-        self.mod_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.mnv2.place(x=427, y=178, width=30)
+        self.mod_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_nv3_entry.place(x=460.0, y=217.0, width=50.0, height=20.0)
+        self.mod_nv2_entry.place(x=492.0, y=178.0, width=50.0, height=20.0)
+
         self.mnv3 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv3')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnv3.place(x=411, y=217)
-
-        self.mod_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.mnv3.place(x=427, y=220, width=30)
+        self.mod_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_nv4_entry.place(x=460.0, y=264.0, width=50.0, height=20.0)
+        self.mod_nv3_entry.place(x=492.0, y=217.0, width=50.0, height=20.0)
+
         self.mnv4 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv4')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnv4.place(x=411, y=266)
-
-        self.mod_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.mnv4.place(x=427, y=269, width=30)
+        self.mod_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_nv5_entry.place(x=460.0, y=303.0, width=50.0, height=20.0)
+        self.mod_nv4_entry.place(x=492.0, y=264.0, width=50.0, height=20.0)
+
         self.mnv5 = tk.Label(self.canvas, text=f"{read_input_from_json('mod_nv5')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnv5.place(x=411, y=304)
+        self.mnv5.place(x=427, y=305, width=30)
+        self.mod_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_nv5_entry.place(x=492.0, y=303.0, width=50.0, height=20.0)
 
-        self.mod_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.mod_time_entry.place(x=460.0, y=387.0, width=50.0, height=20.0)
         self.mnt = tk.Label(self.canvas, text=f"{read_input_from_json('mod_time')}", fg=self.text_color,
                             font=("Inter", 11), justify="center", bg=self.used_color)
-        self.mnt.place(x=411, y=387)
+        self.mnt.place(x=427, y=389, width=30)
+        self.mod_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.mod_time_entry.place(x=492.0, y=387.0, width=50.0, height=20.0)
 
         # Apartado de configuraciones para actividad deportiva
         self.dep_bg_image = PhotoImage(file=relative_to_assets("SPOR_BG.png"))
-        self.canvas.create_image(565, 76, image=self.dep_bg_image, anchor="nw")
+        self.canvas.create_image(578, 77, image=self.dep_bg_image, anchor="nw")
         self.text_dep_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
-        self.canvas.create_image(582, 119, image=self.text_dep_bg_image, anchor="nw")
+        self.canvas.create_image(595, 120, image=self.text_dep_bg_image, anchor="nw")
 
-        self.dep_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_nv1_entry.place(x=720.0, y=140.0, width=50.0, height=20.0)
         self.pnv1 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv1')}", fg=self.text_color,
                              font=("Inter", 11), justify="center",
                              bg=self.used_color)
-        self.pnv1.place(x=676, y=139)
-
-        self.dep_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.pnv1.place(x=708, y=143, width=30)
+        self.dep_nv1_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_nv2_entry.place(x=720.0, y=178.0, width=50.0, height=20.0)
+        self.dep_nv1_entry.place(x=769.0, y=140.0, width=50.0, height=20.0)
+
         self.pnv2 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv2')}", fg=self.text_color,
                              font=("Inter", 11), justify="center",
                              bg=self.used_color)
-        self.pnv2.place(x=676, y=177)
-
-        self.dep_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.pnv2.place(x=708, y=178, width=30)
+        self.dep_nv2_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_nv3_entry.place(x=720.0, y=217.0, width=50.0, height=20.0)
+        self.dep_nv2_entry.place(x=769.0, y=178.0, width=50.0, height=20.0)
+
         self.pnv3 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv3')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.pnv3.place(x=676, y=217)
-
-        self.dep_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.pnv3.place(x=708, y=217, width=30)
+        self.dep_nv3_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_nv4_entry.place(x=720.0, y=264.0, width=50.0, height=20.0)
+        self.dep_nv3_entry.place(x=769.0, y=217.0, width=50.0, height=20.0)
+
         self.pnv4 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv4')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.pnv4.place(x=676, y=266)
-
-        self.dep_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+        self.pnv4.place(x=708, y=266, width=30)
+        self.dep_nv4_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_nv5_entry.place(x=720.0, y=303.0, width=50.0, height=20.0)
+        self.dep_nv4_entry.place(x=769.0, y=264.0, width=50.0, height=20.0)
+
         self.pnv5 = tk.Label(self.canvas, text=f"{read_input_from_json('dep_nv5')}", fg=self.text_color,
                              font=("Inter", 11), justify="center", bg=self.used_color)
-        self.pnv5.place(x=676, y=304)
+        self.pnv5.place(x=708, y=304, width=30)
+        self.dep_nv5_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                   font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_nv5_entry.place(x=769.0, y=303.0, width=50.0, height=20.0)
 
-        self.dep_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
-                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
-        self.dep_time_entry.place(x=720.0, y=387.0, width=50.0, height=20.0)
         self.pnt = tk.Label(self.canvas, text=f"{read_input_from_json('dep_time')}", fg=self.text_color,
                             font=("Inter", 11), justify="center", bg=self.used_color)
-        self.pnt.place(x=676, y=387)
+        self.pnt.place(x=708, y=387, width=30)
+        self.dep_time_entry = Entry(bd=1, bg="white", fg="#000000", highlightthickness=0, state="normal",
+                                    font=("Inter", 12), validate="key", validatecommand=(self.validate_func, "%P"))
+        self.dep_time_entry.place(x=769.0, y=387.0, width=50.0, height=20.0)
 
         self.register_bg_image = PhotoImage(file=relative_to_assets("SAVE_ANGLE_BTN0_BG.png"))
         self.save_config_button = tk.Button(self.canvas, image=self.register_bg_image, text="Go to Interface 1",
@@ -580,8 +579,8 @@ class AppInterface1(AppBase):
         return canvas
 
     def init_widgets(self):
-        self.canvas.create_text(85, 25, anchor="nw", text="Seleccione modalidad", fill=self.text_color,
-                                font=("Inter", 30))
+        self.canvas.create_text(130, 40, anchor="w", text="Seleccione modalidad", fill=self.text_color,
+                                font=("Inter", 30), width=400)
         self.canvas.create_text(135, 370, anchor="nw", text="MANUAL", fill=self.text_color, font=("Inter", 14))
         self.manual_bg_image = PhotoImage(file=relative_to_assets("MANUAL_BTN_BG.png"))
         self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
@@ -1023,25 +1022,24 @@ class AppInterface2(AppBase):
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Inter", 16), width=10, validate="key",
                                    validatecommand=(self.cmd_entry, "%P"), bg="white")
-        self.user_input.place(x=410, y=600)
+        self.user_input.place(x=420, y=600)
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image, command=self.apply_combox_changes,
                                              relief="flat", borderwidth=0, bg=self.used_color)
-        self.apply_button_widget.place(x=350, y=640)
+        self.apply_button_widget.place(x=380, y=640)
         self.apply_button_widget.config(state="disabled")
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
         self.mensaje_label1.place(x=590, y=640)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#000000")
-        self.strengthT_label.place(x=360, y=600)
+        self.strengthT_label.place(x=355, y=600)
         self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#000000")
-        self.strengthKG_label.place(x=540, y=600)
+        self.strengthKG_label.place(x=555, y=600)
 
-        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13),
-                                                      fill=self.text_color)
+        # self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13), fill=self.text_color)
 
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
         self.canvas.create_image(709, 135, image=self.indicator1_bg_image, anchor="nw")
@@ -1086,7 +1084,8 @@ class AppInterface2(AppBase):
             self.square_widget.place(x=583, y=398 - (i * 60))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = self.canvas.create_text(600, 110, text="Niveles", font=("Inter", 13), fill=self.text_color)
+        self.titleC_label = self.canvas.create_text(570, 120, text="Niveles", font=("Inter", 13), fill=self.text_color
+                                                    , width=150, anchor="w")
 
         self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN0.png"))
         self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN0.png"))
@@ -1100,7 +1099,7 @@ class AppInterface2(AppBase):
             borderwidth=0,
             bg=self.used_color,
             command=self.save_boton)
-        self.boton_save.place(x=720, y=545)
+        self.boton_save.place(x=720, y=550)
         self.boton_save.config(state="disabled")
 
         self.boton_toggle = tk.Button(
@@ -1413,8 +1412,8 @@ class AppInterface2(AppBase):
     def init_widgets(self):
         # Mostrar información del paciente
         nombre_paciente = self.patient_data.get("Nombre", "No registrado")
-        self.nombre_title = self.canvas.create_text(200, 110, text=f"Pierna de: {nombre_paciente}",
-                                                    font=("Inter", 13), fill=self.text_color)
+        self.nombre_title = self.canvas.create_text(50, 120, text=f"Pierna de: {nombre_paciente}",
+                                                    font=("Inter", 13), fill=self.text_color, width=400, anchor="w")
 
         self.return_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
         self.return_btn = tk.Button(self.canvas, state="normal", relief="flat",
@@ -1784,26 +1783,23 @@ class AppInterface3(AppBase):
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Inter", 16), width=10, validate="key",
                                    validatecommand=(self.cmd_entry, "%P"), bg="white")
-        self.user_input.place(x=410, y=600)
+        self.user_input.place(x=420, y=600)
         self.user_input.config(state="disabled")
 
         self.apply_image = PhotoImage(file=relative_to_assets("APPLY_BTN0.png"))
         self.apply_button_widget = tk.Button(self.canvas, image=self.apply_image,
                                              command=self.apply_combox_changes, relief="flat", borderwidth=0,
                                              bg=self.used_color)
-        self.apply_button_widget.place(x=350, y=640)
+        self.apply_button_widget.place(x=380, y=640)
         self.apply_button_widget.config(state="disabled")
 
         self.mensaje_label1 = tk.Label(self.canvas, text="", font=("Inter", 12), bg=self.used_color)
         self.mensaje_label1.place(x=590, y=640)
 
         self.strengthT_label = tk.Label(self.canvas, text="F =", font=("Inter", 18), bg=self.used_color, fg="#404045")
-        self.strengthT_label.place(x=360, y=600)
+        self.strengthT_label.place(x=355, y=600)
         self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#404045")
-        self.strengthKG_label.place(x=540, y=600)
-
-        self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13),
-                                                      fill=self.text_color)
+        self.strengthKG_label.place(x=555, y=600)
 
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
         self.canvas.create_image(709, 135, image=self.indicator1_bg_image, anchor="nw")
@@ -1847,7 +1843,8 @@ class AppInterface3(AppBase):
             self.square_widget.place(x=583, y=398 - (i * 60))
             self.squares.append(self.square_widget)
 
-        self.titleC_label = self.canvas.create_text(600, 110, text="Niveles", font=("Inter", 13), fill=self.text_color)
+        self.titleC_label = self.canvas.create_text(570, 120, text="Niveles", font=("Inter", 13), fill=self.text_color
+                                                    , width=150, anchor="w")
 
         self.imagen_iniciar = PhotoImage(file=relative_to_assets("START_BTN0.png"))
         self.imagen_detener = PhotoImage(file=relative_to_assets("STOP_BTN0.png"))
@@ -1861,7 +1858,7 @@ class AppInterface3(AppBase):
             borderwidth=0,
             bg=self.used_color,
             command=self.save_boton)
-        self.boton_save.place(x=720, y=545)
+        self.boton_save.place(x=720, y=550)
         self.boton_save.config(state="disabled")
 
         self.boton_toggle = tk.Button(
@@ -2167,8 +2164,8 @@ class AppInterface3(AppBase):
     def init_widgets(self):
         # Mostrar información del paciente
         nombre_paciente = self.patient_data.get("Nombre", "No registrado")
-        self.nombre_title = self.canvas.create_text(190, 110, text=f"Pierna de: {nombre_paciente}",
-                                                    fill=self.text_color, font=("Inter", 13))
+        self.nombre_title = self.canvas.create_text(50, 120, text=f"Pierna de: {nombre_paciente}",
+                                                    fill=self.text_color, font=("Inter", 13), width=400, anchor="w")
 
         self.return_image = PhotoImage(file=relative_to_assets("GO_BACK_BTN1.png"))
         self.return_btn = tk.Button(self.canvas, state="normal", relief="flat",

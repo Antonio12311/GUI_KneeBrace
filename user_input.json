@@ -5,7 +5,7 @@
    "sed_nv4": "4",
    "sed_nv5": "4",
    "sed_time": "15",
-   "mod_nv1": "3",
+   "mod_nv1": "17",
    "mod_nv2": "7",
    "mod_nv3": "7",
    "mod_nv4": "7",
@@ -16,11 +16,5 @@
    "dep_nv3": "4",
    "dep_nv4": "7",
    "dep_nv5": "1",
-   "dep_time": "1",
-   "spor_nv1": "2",
-   "spor_nv2": "3",
-   "spor_nv3": "4",
-   "spor_nv4": "5",
-   "spor_nv5": "6",
-   "spor_time": "10"
+   "dep_time": "6"
 }
