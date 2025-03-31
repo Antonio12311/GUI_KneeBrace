@@ -130,6 +130,7 @@ class AppInterface0(AppBase):
         self.x0 = (self.screen_width // 2) - (int(self.dimension_x0) // 2)  # Calcula la posición X
         self.y0 = (self.screen_height // 2) - (int(self.dimension_y0) // 2)  # Calcula la posición Y
         self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
+        self.root.title("ITESM ETI Prototype")
 
         self.root.resizable(False, False)
         self.root.configure(bg=self.used_color)
@@ -258,13 +259,13 @@ class AppInterface0(AppBase):
         self.patient_data["Sexo"] = self.combobox1.get()
         self.patient_data["Actividad"] = self.combobox2.get()
         self.patient_data["Expediente"] = self.entry_02.get()
-        # self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
+        self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
 
-        """"
+
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
             return
-        """
+
         self.controller.switch_frame(AppInterface1)
 
     def error_message(self):
@@ -298,6 +299,7 @@ class AppInterface01(AppBase):
         self.validate_func = self.canvas.register(validate_number_input)
         self.init_widgets()
         self.user_input_widgets()
+        self.root.title("ITESM ETI Prototype")
 
     def create_canvas(self, dimension_y, dimension_x):
         canvas = tk.Canvas(self.root, bg=self.used_color, height=int(dimension_y), width=int(dimension_x), bd=0,
@@ -555,6 +557,7 @@ class AppInterface1(AppBase):
         self.dimension_y0 = "550"
         self.root.resizable(False, False)
         self.root.configure(bg=self.used_color)
+        self.root.title("ITESM ETI Prototype")
 
         self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
         self.screen_height = self.root.winfo_screenheight()  # Obtiene el alto de la pantalla
@@ -657,6 +660,7 @@ class AppInterface2(AppBase):
         x = (self.screen_width // 2) - (int(self.dimension_x1) // 2)  # Calcula la posición X
         y = (self.screen_height // 2) - (int(self.dimension_y1) // 2)  # Calcula la posición Y
         self.root.geometry(f"{self.dimension_x1}x{self.dimension_y1}+{x}+{y}")
+        self.root.title("ITESM ETI Prototype")
 
         self.root.resizable(False, False)
         self.root.configure(bg=self.used_color)
@@ -1495,6 +1499,7 @@ class AppInterface3(AppBase):
         self.apply_combox_changes()
         self.leg_animation = LegAnimation(self.canvas, self.frames_path)
         self.init_widgets()
+        self.root.title("ITESM ETI Prototype")
 
     def create_canvas(self, dimension_x, dimension_y):
         canvas = tk.Canvas(
