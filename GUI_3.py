@@ -35,14 +35,18 @@ def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)  # La entrada es el nombre de la imagen como variable str
 
 
-def read_input_from_json(variable, filename="user_input.json"):
+def read_input_from_json(variable, filename="user_input1.json"):
     try:
-        with open(filename, "r") as file:
+        # Get the directory where this script is located
+        script_dir = Path(__file__).resolve().parent
+        # Construct the full path to the JSON file in the config directory
+        config_path = script_dir / "config" / filename
+
+        with open(config_path, "r") as file:
             data = json.load(file)
             return data.get(variable)  # Using .get() to avoid KeyError
     except (FileNotFoundError, json.JSONDecodeError):
         return None  # File doesn't exist or is invalid
-
 
 """
 ########################################################################################################################
@@ -305,7 +309,7 @@ class AppInterface01(AppBase):
         canvas.place(x=0, y=0)
         return canvas
 
-    def save_input_to_json(self, value, variable, filename="user_input.json"):
+    def save_input_to_json(self, value, variable, filename="user_input1.json"):
         # Load existing data if file exists
         data = {}
         if os.path.exists(filename):
@@ -333,7 +337,7 @@ class AppInterface01(AppBase):
                                         relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=755.0, y=465.0)
 
-    def read_input_from_json(self, variable, filename="user_input.json"):
+    def read_input_from_json(self, variable, filename="user_input1.json"):
         try:
             with open(filename, "r") as file:
                 data = json.load(file)
@@ -711,10 +715,40 @@ class AppInterface2(AppBase):
     """Selección automáticadel  puerto conectado a Arduino"""
 
     def find_arduino_port(self):
-        ports = serial.tools.list_ports.comports()
-        for port in ports:
-            if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
-                return port.device
+        """Find the Arduino's serial port on Raspberry Pi OS (Linux)"""
+        import serial.tools.list_ports
+
+        # Common Arduino/CH340 identifiers on Linux
+        arduino_identifiers = [
+            'Arduino',  # Official Arduino boards
+            'CH340',  # Common Chinese clone chip
+            'USB2.0-Serial',  # Alternative CH340 description
+            'USB Serial',  # Generic serial
+            'ACM',  # Arduino Uno sometimes shows as ttyACM
+            'USB2.0-Ser'  # Partial match for some adapters
+        ]
+
+        try:
+            ports = serial.tools.list_ports.comports()
+            for port in ports:
+                # Check both description and hardware ID
+                port_info = f"{port.description} {port.hwid}".lower()
+                if any(id.lower() in port_info for id in arduino_identifiers):
+                    return port.device
+
+            # Fallback: Check common port names if auto-detection fails
+            common_ports = ['/dev/ttyACM0', '/dev/ttyUSB0', '/dev/ttyS0']
+            for port in common_ports:
+                try:
+                    test = serial.Serial(port)
+                    test.close()
+                    return port
+                except:
+                    continue
+
+        except Exception as e:
+            print(f"Port detection error: {str(e)}")
+
         return None
 
     """Lectura de datos seriales y cambbio de posición de animación"""
@@ -1537,10 +1571,40 @@ class AppInterface3(AppBase):
             self.connect_to_arduino()
 
     def find_arduino_port(self):
-        ports = serial.tools.list_ports.comports()
-        for port in ports:
-            if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
-                return port.device
+        """Find the Arduino's serial port on Raspberry Pi OS (Linux)"""
+        import serial.tools.list_ports
+
+        # Common Arduino/CH340 identifiers on Linux
+        arduino_identifiers = [
+            'Arduino',  # Official Arduino boards
+            'CH340',  # Common Chinese clone chip
+            'USB2.0-Serial',  # Alternative CH340 description
+            'USB Serial',  # Generic serial
+            'ACM',  # Arduino Uno sometimes shows as ttyACM
+            'USB2.0-Ser'  # Partial match for some adapters
+        ]
+
+        try:
+            ports = serial.tools.list_ports.comports()
+            for port in ports:
+                # Check both description and hardware ID
+                port_info = f"{port.description} {port.hwid}".lower()
+                if any(id.lower() in port_info for id in arduino_identifiers):
+                    return port.device
+
+            # Fallback: Check common port names if auto-detection fails
+            common_ports = ['/dev/ttyACM0', '/dev/ttyUSB0', '/dev/ttyS0']
+            for port in common_ports:
+                try:
+                    test = serial.Serial(port)
+                    test.close()
+                    return port
+                except:
+                    continue
+
+        except Exception as e:
+            print(f"Port detection error: {str(e)}")
+
         return None
 
     def read_serial_port(self):
