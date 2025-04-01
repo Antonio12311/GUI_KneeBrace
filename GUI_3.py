@@ -195,7 +195,7 @@ class AppInterface0(AppBase):
         # Actividad física
         self.act_bg_image = PhotoImage(file=relative_to_assets("ACT_ENTRY_BG.png"))
         self.canvas.create_image(105, 308, image=self.act_bg_image, anchor="nw")
-        lifestl = ["Sedentario", "Actividad moderada", "Deportista"]
+        lifestl = ["Sedentario", "Moderada", "Deportista"]
         self.combobox2 = ttk.Combobox(self.canvas, values=lifestl, font=("Inter", 13))
         self.combobox2.config(state="readonly")
         self.combobox2.set("...")
