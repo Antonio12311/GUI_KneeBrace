@@ -712,10 +712,20 @@ class AppInterface2(AppBase):
 
     """Selección automáticadel  puerto conectado a Arduino"""
 
+    """ # Función para Windows
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
+                return port.device
+        return None
+    """
+    # Función para raspberry pi 4
+    def find_arduino_port(self):
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            if ("Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description
+                    or "ttyUSB" in port.device or "ttyACM" in port.device):
                 return port.device
         return None
 
@@ -1538,10 +1548,22 @@ class AppInterface3(AppBase):
         else:
             self.connect_to_arduino()
 
+    """ # Función para Windows
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
+                return port.device
+        return None
+    """
+
+    # Función para Raspberry pi 4
+
+    def find_arduino_port(self):
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            if ("Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description
+                    or "ttyUSB" in port.device or "ttyACM" in port.device):
                 return port.device
         return None
 
