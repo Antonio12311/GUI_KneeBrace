@@ -132,6 +132,7 @@ class AppInterface0(AppBase):
         self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
 
         self.root.resizable(False, False)
+        self.root.title("Prototype")
         self.root.configure(bg=self.used_color)
         self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
         self.validate_func = self.canvas.register(validate_number_input)
@@ -258,13 +259,11 @@ class AppInterface0(AppBase):
         self.patient_data["Sexo"] = self.combobox1.get()
         self.patient_data["Actividad"] = self.combobox2.get()
         self.patient_data["Expediente"] = self.entry_02.get()
-        # self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
+        self.patient_data["Fecha"] = f"{self.day_combobox.get()}/{self.month_combobox.get()}/{self.year_combobox.get()}"
 
-        """"
         if not all(self.patient_data.values()):
             messagebox.showwarning("Error", "Asegúrese de llenar todos los espacios")
             return
-        """
         self.controller.switch_frame(AppInterface1)
 
     def error_message(self):
@@ -293,6 +292,7 @@ class AppInterface01(AppBase):
         self.root.geometry(f"{self.dimension_x0}x{self.dimension_y0}+{self.x0}+{self.y0}")
 
         self.root.resizable(False, False)
+        self.root.title("Prototype")
         self.root.configure(bg=self.used_color)
         self.canvas = self.create_canvas(self.dimension_y0, self.dimension_x0)
         self.validate_func = self.canvas.register(validate_number_input)
@@ -554,6 +554,7 @@ class AppInterface1(AppBase):
         self.dimension_x0 = "630"
         self.dimension_y0 = "550"
         self.root.resizable(False, False)
+        self.root.title("Prototype")
         self.root.configure(bg=self.used_color)
 
         self.screen_width = self.root.winfo_screenwidth()  # Obtiene el ancho de la pantalla
@@ -659,6 +660,7 @@ class AppInterface2(AppBase):
         self.root.geometry(f"{self.dimension_x1}x{self.dimension_y1}+{x}+{y}")
 
         self.root.resizable(False, False)
+        self.root.title("Prototype")
         self.root.configure(bg=self.used_color)
         self.canvas = self.create_canvas(self.dimension_x1, self.dimension_y1)
         self.serial_widgets()
@@ -1488,6 +1490,7 @@ class AppInterface3(AppBase):
         self.root.geometry(f"{self.dimension_x1}x{self.dimension_y1}+{x}+{y}")
 
         self.root.resizable(False, False)
+        self.root.title("Prototype")
         self.root.configure(bg=self.used_color)
         self.canvas = self.create_canvas(self.dimension_x1, self.dimension_y1)
         self.serial_widgets()
