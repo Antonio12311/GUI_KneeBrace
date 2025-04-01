@@ -35,7 +35,7 @@ def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)  # La entrada es el nombre de la imagen como variable str
 
 
-def read_input_from_json(variable, filename="user_input1.json"):
+def read_input_from_json(variable, filename="user_input.json"):
     try:
         # Get the directory where this script is located
         script_dir = Path(__file__).resolve().parent
@@ -310,29 +310,28 @@ class AppInterface01(AppBase):
         return canvas
 
     def save_input_to_json(self, value, variable, filename="user_input.json"):
-        # Get the directory where this script is located
-        script_dir = Path(__file__).resolve().parent
-        # Construct the full path to the JSON file in the config directory
-        config_path = script_dir / "config" / filename
+        # Get the absolute path to the config directory
+        config_path = Path(__file__).resolve().parent / "config" / filename
 
-        # Load existing data if file exists
-        data = {}
-        if config_path.exists():
-            try:
-                with open(config_path, "r") as file:
-                    data = json.load(file)
-            except (FileNotFoundError, json.JSONDecodeError):
-                data = {}  # If file is corrupt, start fresh
+        # If file doesn't exist, do nothing and return False
+        if not config_path.exists():
+            return False  # Indicate failure (file not found)
 
-        # Update with new data
-        data[variable] = value
+        try:
+            # Load existing data
+            with open(config_path, "r") as file:
+                data = json.load(file)
 
-        # Ensure config directory exists
-        config_path.parent.mkdir(exist_ok=True)
+            # Update with new data
+            data[variable] = value
 
-        # Write back to file
-        with open(config_path, "w") as file:
-            json.dump(data, file, indent=3)  # indent for pretty formatting
+            # Write back to file
+            with open(config_path, "w") as file:
+                json.dump(data, file, indent=3)
+            return True  # Indicate success
+
+        except (FileNotFoundError, json.JSONDecodeError, PermissionError):
+            return False  # Indicate failure (read/write error)
 
     def init_widgets(self):
         self.tit_st = tk.Label(self.canvas, text="Configuración", fg=self.text_color, font=("Inter", 30),
@@ -344,19 +343,6 @@ class AppInterface01(AppBase):
                                         command=lambda: self.controller.switch_frame(AppInterface0), state="normal",
                                         relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=755.0, y=465.0)
-
-    def read_input_from_json(self,variable, filename="user_input.json"):
-        try:
-            # Get the directory where this script is located
-            script_dir = Path(__file__).resolve().parent
-            # Construct the full path to the JSON file in the config directory
-            config_path = script_dir / "config" / filename
-
-            with open(config_path, "r") as file:
-                data = json.load(file)
-                return data.get(variable)  # Using .get() to avoid KeyError
-        except (FileNotFoundError, json.JSONDecodeError):
-            return None  # File doesn't exist or is invalid
 
     def save_config(self):
         set1 = [self.sed_nv1_entry, self.sed_nv2_entry, self.sed_nv3_entry,
@@ -375,7 +361,7 @@ class AppInterface01(AppBase):
                 key = f"{set_name}_nv{i}" if i <= 5 else f"{set_name}_time"  # Dynamic key naming
 
                 if not value:
-                    self.conform = self.read_input_from_json(key)
+                    self.conform = read_input_from_json(key)
                     self.save_input_to_json(self.conform, key)
                 elif int(value) >= 18:
                     messagebox.showwarning("Error", "La potencia nominal del motor es 18 N/m, \n"
