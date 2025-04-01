@@ -309,12 +309,17 @@ class AppInterface01(AppBase):
         canvas.place(x=0, y=0)
         return canvas
 
-    def save_input_to_json(self, value, variable, filename="user_input1.json"):
+    def save_input_to_json(self, value, variable, filename="user_input.json"):
+        # Get the directory where this script is located
+        script_dir = Path(__file__).resolve().parent
+        # Construct the full path to the JSON file in the config directory
+        config_path = script_dir / "config" / filename
+
         # Load existing data if file exists
         data = {}
-        if os.path.exists(filename):
+        if config_path.exists():
             try:
-                with open(filename, "r") as file:
+                with open(config_path, "r") as file:
                     data = json.load(file)
             except (FileNotFoundError, json.JSONDecodeError):
                 data = {}  # If file is corrupt, start fresh
@@ -322,8 +327,11 @@ class AppInterface01(AppBase):
         # Update with new data
         data[variable] = value
 
+        # Ensure config directory exists
+        config_path.parent.mkdir(exist_ok=True)
+
         # Write back to file
-        with open(filename, "w") as file:
+        with open(config_path, "w") as file:
             json.dump(data, file, indent=3)  # indent for pretty formatting
 
     def init_widgets(self):
@@ -337,9 +345,14 @@ class AppInterface01(AppBase):
                                         relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=755.0, y=465.0)
 
-    def read_input_from_json(self, variable, filename="user_input1.json"):
+    def read_input_from_json(self,variable, filename="user_input.json"):
         try:
-            with open(filename, "r") as file:
+            # Get the directory where this script is located
+            script_dir = Path(__file__).resolve().parent
+            # Construct the full path to the JSON file in the config directory
+            config_path = script_dir / "config" / filename
+
+            with open(config_path, "r") as file:
                 data = json.load(file)
                 return data.get(variable)  # Using .get() to avoid KeyError
         except (FileNotFoundError, json.JSONDecodeError):
