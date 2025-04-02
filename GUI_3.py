@@ -35,18 +35,25 @@ def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)  # La entrada es el nombre de la imagen como variable str
 
 
-def read_input_from_json(variable, filename="user_input.json"):
-    try:
-        # Get the directory where this script is located
-        script_dir = Path(__file__).resolve().parent
-        # Construct the full path to the JSON file in the config directory
-        config_path = script_dir / "config" / filename
+def get_config_dir():
+    """Returns a reliable config directory path (works in dev and as executable)."""
+    home = Path.home()
+    config_dir = home / ".GUI_3" / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)  # Create if missing
+    return config_dir
 
-        with open(config_path, "r") as file:
-            data = json.load(file)
-            return data.get(variable)  # Using .get() to avoid KeyError
-    except (FileNotFoundError, json.JSONDecodeError):
-        return None  # File doesn't exist or is invalid
+
+def read_input_from_json(variable, filename="user_input.json"):
+    config_path = get_config_dir() / filename
+    try:
+        if config_path.exists():
+            with open(config_path, "r") as file:
+                data = json.load(file)
+                return data.get(variable)
+        return None
+    except (IOError, json.JSONDecodeError):
+        return None
+
 
 """
 ########################################################################################################################
@@ -310,28 +317,25 @@ class AppInterface01(AppBase):
         return canvas
 
     def save_input_to_json(self, value, variable, filename="user_input.json"):
-        # Get the absolute path to the config directory
-        config_path = Path(__file__).resolve().parent / "config" / filename
-
-        # If file doesn't exist, do nothing and return False
-        if not config_path.exists():
-            return False  # Indicate failure (file not found)
+        config_path = get_config_dir() / filename
 
         try:
-            # Load existing data
-            with open(config_path, "r") as file:
-                data = json.load(file)
+            # Load existing data (or start fresh if file doesn't exist)
+            data = {}
+            if config_path.exists():
+                with open(config_path, "r") as file:
+                    data = json.load(file)
 
-            # Update with new data
+            # Update data
             data[variable] = value
 
-            # Write back to file
+            # Save
             with open(config_path, "w") as file:
                 json.dump(data, file, indent=3)
-            return True  # Indicate success
+            return True
 
-        except (FileNotFoundError, json.JSONDecodeError, PermissionError):
-            return False  # Indicate failure (read/write error)
+        except (IOError, json.JSONDecodeError):
+            return False
 
     def init_widgets(self):
         self.tit_st = tk.Label(self.canvas, text="Configuración", fg=self.text_color, font=("Inter", 30),
