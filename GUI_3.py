@@ -18,9 +18,8 @@ _DIR = os.path.dirname(__file__)
 OUTPUT_PATH = Path(__file__).resolve().parent
 ASSETS_PATH = OUTPUT_PATH / "assets" / "frame0"
 
-
-# Evita que se ingresen valores no númericos a la entrada de edad
 def validate_number_input(new_value):
+    """ Evita que se ingresen valores no númericos a la entrada. """
     if new_value == "":
         return True
     try:
@@ -29,21 +28,21 @@ def validate_number_input(new_value):
     except ValueError:
         return False
 
-
-# Permite llamar la imagen de un botón
 def relative_to_assets(path: str) -> Path:
+    """ Permite llamar la imagen de un botón. """
     return ASSETS_PATH / Path(path)  # La entrada es el nombre de la imagen como variable str
 
 
 def get_config_dir():
-    """Returns a reliable config directory path (works in dev and as executable)."""
+    """Dirección específica de la carpeta de configuraciones dentro del OS de Raspberry."""
     home = Path.home()
     config_dir = home / ".GUI_3" / "config"
-    config_dir.mkdir(parents=True, exist_ok=True)  # Create if missing
+    config_dir.mkdir(parents=True, exist_ok=True)  # Crea una carpeta no visible para el usuario (si no existe)
     return config_dir
 
 
 def read_input_from_json(variable, filename="user_input.json"):
+    """Se lee el respectivo valor desde la carpeta de configuraciones user_input.json. """
     config_path = get_config_dir() / filename
     try:
         if config_path.exists():
@@ -60,7 +59,7 @@ def read_input_from_json(variable, filename="user_input.json"):
 
 La clase de "Controller" tiene la tarea de realizar las sig. funciones
     * Permite el cambio entre ventanas de la aplicación
-    * Declara las acciones de seguridad necesarias al cambiar y cerrar ventanas
+    * Declara las acciones de seguridad necesarias al cambiar y cerrar ventanas (apagar motor y desconectar micro)
     * Declara las variables de inf. del usuario que se comparten con las demas ventanas
     
 ########################################################################################################################
@@ -71,25 +70,22 @@ class Controller:
     def __init__(self, root):
         self.root = root
         self.patient_data = {}  # Crea un diccionario vacío en el que se almacena la inf. del paciente
-        self.config_data = {}
         self.current_frame = None
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Enlaza el evento on_closing al protoc. de ventana
 
-    """Cambio entre ventanas."""
-
     def switch_frame(self, new_frame_class):
+        """Cambio entre ventanas."""
         if hasattr(self.current_frame, 'disconnect_arduino'):
             self.current_frame.disconnect_arduino()  # Manda a llamar la función de desconexión dentro de cada ventana
         if self.current_frame:
             self.current_frame.pack_forget()  # Oculta la ventana actual
-        self.current_frame = new_frame_class(self.root, self, self.patient_data, self.config_data)
+        self.current_frame = new_frame_class(self.root, self, self.patient_data)
         self.current_frame.pack(fill="both", expand=True)
 
-    """Controla el evento al cerrar ventana."""
-
     def on_closing(self):
+        """Controla el evento al cerrar ventana."""
         if hasattr(self.current_frame, 'turn_off_motor'):
-            self.current_frame.turn_off_motor()  # Encuentra y activa función de apagado del motor
+            self.current_frame.turn_off_motor()  # Encuentra y activa la función de apagado del motor
         if hasattr(self.current_frame, 'disconnect_arduino'):
             self.current_frame.disconnect_arduino()  # Encuentra y activa la función que desconecta del arduino
         time.sleep(0.05)
@@ -105,12 +101,11 @@ La clase de "AppBase" contiene el formato y colores que la interfaz necesita
 
 
 class AppBase(tk.Frame):
-    def __init__(self, root, controller, patient_data, config_data):
+    def __init__(self, root, controller, patient_data):
         super().__init__(root)
         self.root = root
         self.controller = controller
-        self.patient_data = patient_data  # Shared patient data
-        self.config_data = config_data
+        self.patient_data = patient_data  # Se declara la variable que comparte las especificaciones del paciente
         self.used_color = 'white'
         self.text_color = "#3c3d40"
         self.connected_color = "#00487C"
@@ -122,16 +117,16 @@ class AppBase(tk.Frame):
 """
 ############################################ PRIMERA VENTANA ###########################################################
 Se reciben los datos del paciente
-    * Ingresa: nombre, # de expediente, edad, sexo. act. física y fecha
-    * Establece la dirección del archivo a generar con los datos del estudio
+    * Ingresa: nombre, # de expediente, edad, sexo. act. física y fecha del estudio
+    * Establece la dirección del archivo de excel que almacena los datos del paciente
 
 ########################################################################################################################
 """
 
 
 class AppInterface0(AppBase):
-    def __init__(self, root, controller, patient_data, config_data):
-        super().__init__(root, controller, patient_data, config_data)
+    def __init__(self, root, controller, patient_data):
+        super().__init__(root, controller, patient_data)
         self.pack(fill="both", expand=True)
         self.dimension_x0 = "630"
         self.dimension_y0 = "550"
@@ -149,9 +144,9 @@ class AppInterface0(AppBase):
         self.validate_func = self.canvas.register(validate_number_input)
         self.init_widgets()
 
-    """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
 
     def create_canvas(self, dimension_y, dimension_x):
+        """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -164,12 +159,13 @@ class AppInterface0(AppBase):
         canvas.place(x=0, y=0)
         return canvas
 
-    """Botones de la página número 0"""
 
     def init_widgets(self):
+        """Botones iniciales de la página de registro"""
         # Titulo
-        self.canvas.create_text(140, 40, anchor="w", text="Registro de paciente", fill=self.text_color,
-                                font=("Inter", 30), width=400)
+        self.registration_title = tk.Label(self.canvas, text="Registro de paciente", fg=self.text_color,
+                                           font=("Inter", 30), bg=self.used_color)
+        self.registration_title.place(x=130.0, y=20.0, width=380)
 
         # Nombre del paciente
         self.patient_bg_image = PhotoImage(file=relative_to_assets("PATIENT_ENTR_BG.png"))
@@ -264,7 +260,7 @@ class AppInterface0(AppBase):
             messagebox.showinfo("Carpeta seleccionada", f"Los archivos se guardarán en: {self.output_folder}")
 
     def save_and_next(self):
-        """Guarda la información y cambia de interfaz."""
+        """Guarda la información del paciente y cambia de interfaz."""
         self.patient_data["Nombre"] = self.entry_00.get()
         self.patient_data["Edad"] = self.entry_01.get()
         self.patient_data["Sexo"] = self.combobox1.get()
@@ -283,15 +279,15 @@ class AppInterface0(AppBase):
 
 """
 ############################################ SEGUNDA VENTANA ###########################################################
-Presenta las posibles configuraciones
+Presenta las posibles configuraciones del sistema: MANUAL Y AUTOMÁTICO
 
 ########################################################################################################################
 """
 
 
 class AppInterface01(AppBase):
-    def __init__(self, root, controller, patient_data, config_data):
-        super().__init__(root, controller, patient_data, config_data)
+    def __init__(self, root, controller, patient_data):
+        super().__init__(root, controller, patient_data)
         self.pack(fill="both", expand=True)
         self.dimension_x0 = "850"
         self.dimension_y0 = "550"
@@ -311,33 +307,20 @@ class AppInterface01(AppBase):
         self.user_input_widgets()
 
     def create_canvas(self, dimension_y, dimension_x):
-        canvas = tk.Canvas(self.root, bg=self.used_color, height=int(dimension_y), width=int(dimension_x), bd=0,
-                           highlightthickness=0, relief="ridge")
+        """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
+        canvas = tk.Canvas(
+            self.root,
+            bg=self.used_color,
+            height=int(dimension_y),
+            width=int(dimension_x),
+            bd=0,
+            highlightthickness=0,
+            relief="ridge")
         canvas.place(x=0, y=0)
         return canvas
 
-    def save_input_to_json(self, value, variable, filename="user_input.json"):
-        config_path = get_config_dir() / filename
-
-        try:
-            # Load existing data (or start fresh if file doesn't exist)
-            data = {}
-            if config_path.exists():
-                with open(config_path, "r") as file:
-                    data = json.load(file)
-
-            # Update data
-            data[variable] = value
-
-            # Save
-            with open(config_path, "w") as file:
-                json.dump(data, file, indent=3)
-            return True
-
-        except (IOError, json.JSONDecodeError):
-            return False
-
     def init_widgets(self):
+        """Botones iniciales de la interfaz de configuración. """
         self.tit_st = tk.Label(self.canvas, text="Configuración", fg=self.text_color, font=("Inter", 30),
                                bg=self.used_color)
         self.tit_st.place(x=300.0, y=10.0, width=250)
@@ -348,7 +331,31 @@ class AppInterface01(AppBase):
                                         relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=755.0, y=465.0)
 
+    def save_input_to_json(self, value, variable, filename="user_input.json"):
+        """Se almacenan las entradas de datos al archivo de configuraciones .JSON. """
+
+        config_path = get_config_dir() / filename
+
+        try:
+            # Carga datos existentes (o crea nuevos en caso de ser necesarios)
+            data = {}
+            if config_path.exists():
+                with open(config_path, "r") as file:
+                    data = json.load(file)
+
+            # Actualiza datos
+            data[variable] = value
+
+            # Guardado
+            with open(config_path, "w") as file:
+                json.dump(data, file, indent=3)
+            return True
+
+        except (IOError, json.JSONDecodeError):
+            return False
+
     def save_config(self):
+        """Se identifica el prefijo y se almacena el valor en su respectiva variable"""
         set1 = [self.sed_nv1_entry, self.sed_nv2_entry, self.sed_nv3_entry,
                 self.sed_nv4_entry, self.sed_nv5_entry, self.sed_time_entry]
         set2 = [self.mod_nv1_entry, self.mod_nv2_entry, self.mod_nv3_entry,
@@ -357,7 +364,7 @@ class AppInterface01(AppBase):
                 self.dep_nv4_entry, self.dep_nv5_entry, self.dep_time_entry]
 
         set_matrix = [set1, set2, set3]
-        set_names = ["sed", "mod", "dep"]  # (JSON keys)
+        set_names = ["sed", "mod", "dep"]  # Keys
 
         for set_name, row in zip(set_names, set_matrix):
             for i, entry in enumerate(row, start=1):
@@ -384,6 +391,7 @@ class AppInterface01(AppBase):
             ('pnv', 'dep_nv', 5), ('pnt', 'dep_time', 1)
         ]
 
+        # Con la misma lógica de identificar el prefijo (key) se cambia el dato mostrado en la pantalla de config.
         for prefix, json_prefix, count in configs:
             for i in range(1, count + 1):
                 attr = f"{prefix}{i if count > 1 else ''}"
@@ -391,8 +399,7 @@ class AppInterface01(AppBase):
                 getattr(self, attr).config(text=f"{read_input_from_json(json_key)}", fg=self.text_color, bg="#FFFFFF")
 
     def user_input_widgets(self):
-
-        # Apartado de configuraciones para actividad sedentaria
+        """Conjunto de elementos (texto, etiquetas y entradas) de la pantalla config. """
         self.sed_bg_image = PhotoImage(file=relative_to_assets("SED_BG.png"))
         self.canvas.create_image(18, 78, image=self.sed_bg_image, anchor="nw")
         self.text_sed_bg_image = PhotoImage(file=relative_to_assets("TEXT_SET_BG.png"))
@@ -554,8 +561,8 @@ Presenta las modalidades: AUTOMÁTICO Y MANUAL
 
 
 class AppInterface1(AppBase):
-    def __init__(self, root, controller, patient_data, config_data):
-        super().__init__(root, controller, patient_data, config_data)
+    def __init__(self, root, controller, patient_data):
+        super().__init__(root, controller, patient_data)
         self.pack(fill="both", expand=True)
         self.root = root
         self.dimension_x0 = "630"
@@ -574,6 +581,7 @@ class AppInterface1(AppBase):
         self.init_widgets()
 
     def create_canvas(self, dimension_y, dimension_x):
+        """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -587,14 +595,15 @@ class AppInterface1(AppBase):
         return canvas
 
     def init_widgets(self):
+        """Conjunto de elementos (texto, etiquetas y entradas) de la pantalla 'selec. de modalidad'. """
+
         self.canvas.create_text(130, 40, anchor="w", text="Seleccione modalidad", fill=self.text_color,
                                 font=("Inter", 30), width=400)
         self.canvas.create_text(135, 370, anchor="nw", text="MANUAL", fill=self.text_color, font=("Inter", 14))
         self.manual_bg_image = PhotoImage(file=relative_to_assets("MANUAL_BTN_BG.png"))
         self.manual_button = tk.Button(self.canvas, image=self.manual_bg_image,
                                        command=lambda: self.controller.switch_frame(AppInterface3), state="normal",
-                                       relief="flat",
-                                       borderwidth=0, bg=self.used_color, )
+                                       relief="flat", borderwidth=0, bg=self.used_color, )
         self.manual_button.place(x=97.0, y=198.0)
 
         self.canvas.create_text(405, 370, anchor="nw", text="AUTOMÁTICO", fill=self.text_color, font=("Inter", 14))
@@ -620,8 +629,8 @@ Ventana que realiza el estudio AUTOMÁTICO
 
 
 class AppInterface2(AppBase):
-    def __init__(self, root, controller, patient_data, config_data):
-        super().__init__(root, controller, patient_data, config_data)
+    def __init__(self, root, controller, patient_data):
+        super().__init__(root, controller, patient_data)
         self.columns = None
         self.column_dimensions = None
         self.position = None
@@ -677,6 +686,8 @@ class AppInterface2(AppBase):
         self.init_widgets()
 
     def create_canvas(self, dimension_x, dimension_y):
+        """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
+
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -690,6 +701,7 @@ class AppInterface2(AppBase):
         return canvas
 
     def serial_widgets(self):
+        """Botones de conexión. """
 
         self.status_label = tk.Label(self.canvas, text="Sin conexión", fg=self.disconnected_color, font=("Inter", 12),
                                      bg=self.used_color)
@@ -698,7 +710,8 @@ class AppInterface2(AppBase):
         self.connect_button_image = PhotoImage(file=relative_to_assets("CONNECT_BTN0.png"))
         self.disconnect_button_image = PhotoImage(file=relative_to_assets("DISCONNECT_BTN0.png"))
 
-        self.toggle_connection_button = Button(  # Botón de conexión
+        # Botón de conexión
+        self.toggle_connection_button = Button(
             self.canvas,
             image=self.connect_button_image,
             command=self.toggle_connection,
@@ -707,26 +720,23 @@ class AppInterface2(AppBase):
         )
         self.toggle_connection_button.place(x=70, y=550)
 
-    """Cambia el estado de la conexión"""
-
     def toggle_connection(self):
+        """Cambia el estado de la conexión. """
         if self.is_connected:
             self.disconnect_arduino()
         else:
             self.connect_to_arduino()
 
-    """Selección automáticadel  puerto conectado a Arduino"""
-
     def find_arduino_port(self):
-        """Find the Arduino's serial port on Raspberry Pi OS (Linux)"""
+        """Se encuentra el puerto de Arduino desde Raspberry Pi OS (Linux)"""
         import serial.tools.list_ports
 
         # Common Arduino/CH340 identifiers on Linux
         arduino_identifiers = [
-            'Arduino',  # Official Arduino boards
-            'CH340',  # Common Chinese clone chip
-            'USB2.0-Serial',  # Alternative CH340 description
-            'USB Serial',  # Generic serial
+            'Arduino',  # Oficial
+            'CH340',  # Chino
+            'USB2.0-Serial',  # Otras presentaciones del puerto serial
+            'USB Serial',  #
             'ACM',  # Arduino Uno sometimes shows as ttyACM
             'USB2.0-Ser'  # Partial match for some adapters
         ]
@@ -801,7 +811,7 @@ class AppInterface2(AppBase):
                     self.stop_threads = False
 
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to connect: {e}")
+                    messagebox.showerror("Error", f"No se logró conectar: {e}")
                     if self.ser:
                         self.ser.close()
                         self.ser = None
@@ -809,7 +819,7 @@ class AppInterface2(AppBase):
                     reading_thread = threading.Thread(target=self.read_serial_port, args=self.ser)
                     reading_thread.start()
         else:
-            messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
+            messagebox.showwarning("Error", "No se encontró el dispositivo. Verifique su conexión.")
 
     """Desconexión de arduino y detención de threads de lectura"""
 
@@ -828,7 +838,7 @@ class AppInterface2(AppBase):
 
     """Inicialización de temporizador"""
 
-    def start_timer(self):
+    def start_timer(self):   
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
         key_id = guide[0:3]
         if not self.running:
@@ -850,16 +860,16 @@ class AppInterface2(AppBase):
         if not self.running:
             return
 
-        if self.time_left > 0:
+        if self.time_left >= 0:
             minutes, seconds = divmod(self.time_left, 60)
-            self.label_timer.config(text=f"{minutes:02}:{seconds:02}")
+            self.label_timer.config(text=f"Temporizador: {minutes:02}:{seconds:02}")
             self.time_left -= 1
 
             if self.position >= self.max_angle and not self.message_shown:
                 # Posición objetivo alcanzada
                 self.running = False
                 self.achieved_test("#06D7A0")
-                self.label_timer.config(text="00:00")
+                self.label_timer.config(text="Temporizador: 00:00")
                 messagebox.showinfo("Timer", "Ha alcanzado la posición deseada!")
                 self.message_shown = True
 
@@ -870,7 +880,7 @@ class AppInterface2(AppBase):
             # Posición objetivo no alcanzada
             self.running = False
             self.failed_test("#F04770")
-            self.label_timer.config(text="00:00")
+            self.label_timer.config(text="Temporizador: 00:00")
             messagebox.showinfo("Timer", "No ha alcanzado la posición deseada!")
             self.message_shown = True
 
@@ -886,7 +896,7 @@ class AppInterface2(AppBase):
             # Se cambia la imagen del botón y se detiene la animación, el timer, y el thread de envío de datos seriales
             self.animation_off_write_serial()
             self.stop_timer()
-            self.label_timer.config(text="00:00")
+            self.label_timer.config(text="Temporizador: 00:00")
             self.boton_toggle.config(text="Iniciar", image=self.imagen_iniciar, command=self.toggle_boton)
 
             # Detiene el ciclo de envío de datos
@@ -1049,9 +1059,11 @@ class AppInterface2(AppBase):
         return True
 
     def create_combo_widget(self):
-        # Title
-        self.canvas.create_text(350, 10, anchor="nw", text="Estudio automático", fill=self.text_color,
-                                font=("Inter", 30))
+        # Titulo
+        self.manual_title = tk.Label(self.canvas, text="Estudio Automático", fg=self.text_color,
+                                     font=("Inter", 30), bg=self.used_color)
+        self.manual_title.place(x=330.0, y=15.0, width=350)
+
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
         self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Inter", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
@@ -1098,7 +1110,7 @@ class AppInterface2(AppBase):
         self.max_angle_btn.place(x=735.0, y=284.0)
         self.max_angle_btn.config(state="disabled")
 
-        self.label_timer = tk.Label(root, text="00:00", font=("Inter", 12), bg=self.used_color)
+        self.label_timer = tk.Label(root, text="Temporizador: 00:00", font=("Inter", 12), bg=self.used_color)
         self.label_timer.place(x=740.0, y=385.0)
 
         self.leg_bg_image = PhotoImage(file=relative_to_assets("LEG_BG.png"))
@@ -1478,8 +1490,8 @@ Ventana que realiza el estudio MANUAL
 
 
 class AppInterface3(AppBase):
-    def __init__(self, root, controller, patient_data, config_data):
-        super().__init__(root, controller, patient_data, config_data)
+    def __init__(self, root, controller, patient_data):
+        super().__init__(root, controller, patient_data)
         self.updateMeterLine = None
         self.MeterWidget = None
         self.messagebox = None
@@ -1661,7 +1673,7 @@ class AppInterface3(AppBase):
                     self.stop_threads = False
 
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to connect: {e}")
+                    messagebox.showerror("Error", f"No se logró conectar: {e}")
                     if self.ser:
                         self.ser.close()
                         self.ser = None
@@ -1671,7 +1683,7 @@ class AppInterface3(AppBase):
                     reading_thread.start()
 
         else:
-            messagebox.showwarning("Not Found", "Arduino not found. Please check the connection.")
+            messagebox.showwarning("Error", "No se encontró el dispositivo. Verifique su conexión.")
 
     def disconnect_arduino(self):
         self.turn_off_motor()
@@ -1843,7 +1855,10 @@ class AppInterface3(AppBase):
 
     def create_combo_widget(self):
         # Title
-        self.canvas.create_text(380, 10, anchor="nw", text="Estudio Manual", fill=self.text_color, font=("Inter", 30))
+        self.manual_title = tk.Label(self.canvas, text="Estudio Manual", fg=self.text_color,
+                                     font=("Inter", 30), bg=self.used_color)
+        self.manual_title.place(x=350.0, y=15.0, width=300)
+
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
         self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Inter", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
