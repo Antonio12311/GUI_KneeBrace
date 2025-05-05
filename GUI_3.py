@@ -54,6 +54,30 @@ def read_input_from_json(variable, filename="user_input.json"):
         return None
 
 
+def save_input_to_json(value, variable, filename="user_input.json"):
+    """Se almacenan las entradas de datos al archivo de configuraciones .JSON. """
+
+    config_path = get_config_dir() / filename
+
+    try:
+        # Carga datos existentes (o crea nuevos en caso de ser necesarios)
+        data = {}
+        if config_path.exists():
+            with open(config_path, "r") as file:
+                data = json.load(file)
+
+        # Actualiza datos
+        data[variable] = value
+
+        # Guardado
+        with open(config_path, "w") as file:
+            json.dump(data, file, indent=3)
+        return True
+
+    except (IOError, json.JSONDecodeError):
+        return False
+
+
 """
 ########################################################################################################################
 
@@ -331,29 +355,6 @@ class AppInterface01(AppBase):
                                         relief="flat", borderwidth=0, bg=self.used_color)
         self.go_back_button.place(x=755.0, y=465.0)
 
-    def save_input_to_json(self, value, variable, filename="user_input.json"):
-        """Se almacenan las entradas de datos al archivo de configuraciones .JSON. """
-
-        config_path = get_config_dir() / filename
-
-        try:
-            # Carga datos existentes (o crea nuevos en caso de ser necesarios)
-            data = {}
-            if config_path.exists():
-                with open(config_path, "r") as file:
-                    data = json.load(file)
-
-            # Actualiza datos
-            data[variable] = value
-
-            # Guardado
-            with open(config_path, "w") as file:
-                json.dump(data, file, indent=3)
-            return True
-
-        except (IOError, json.JSONDecodeError):
-            return False
-
     def save_config(self):
         """Se identifica el prefijo y se almacena el valor en su respectiva variable"""
         set1 = [self.sed_nv1_entry, self.sed_nv2_entry, self.sed_nv3_entry,
@@ -373,12 +374,12 @@ class AppInterface01(AppBase):
 
                 if not value:
                     self.conform = read_input_from_json(key)
-                    self.save_input_to_json(self.conform, key)
-                elif int(value) >= 18:
+                    save_input_to_json(self.conform, key)
+                elif int(value) >= 18 and key != f"{set_name}_time":
                     messagebox.showwarning("Error", "La potencia nominal del motor es 18 N/m, \n"
                                                     "ingrese un valor menor")
                 else:
-                    self.save_input_to_json(value, key)
+                    save_input_to_json(value, key)
 
         # Borra las entradas al terminar de almacenar los datos
         for entry_set in [set1, set2, set3]:
@@ -687,7 +688,6 @@ class AppInterface2(AppBase):
 
     def create_canvas(self, dimension_x, dimension_y):
         """función que crea el lienzo en el que se colocan los objetos dentro de la ventana"""
-
         canvas = tk.Canvas(
             self.root,
             bg=self.used_color,
@@ -702,7 +702,6 @@ class AppInterface2(AppBase):
 
     def serial_widgets(self):
         """Botones de conexión. """
-
         self.status_label = tk.Label(self.canvas, text="Sin conexión", fg=self.disconnected_color, font=("Inter", 12),
                                      bg=self.used_color)
         self.status_label.place(x=75.0, y=620.0)
@@ -731,25 +730,25 @@ class AppInterface2(AppBase):
         """Se encuentra el puerto de Arduino desde Raspberry Pi OS (Linux)"""
         import serial.tools.list_ports
 
-        # Common Arduino/CH340 identifiers on Linux
+        # Identificadores comunes de Arduino/CH340 en Linux
         arduino_identifiers = [
-            'Arduino',  # Oficial
-            'CH340',  # Chino
-            'USB2.0-Serial',  # Otras presentaciones del puerto serial
-            'USB Serial',  #
-            'ACM',  # Arduino Uno sometimes shows as ttyACM
-            'USB2.0-Ser'  # Partial match for some adapters
+            'Arduino',
+            'CH340', #Chino
+            'USB2.0-Serial',
+            'USB Serial',
+            'ACM',
+            'USB2.0-Ser'
         ]
 
         try:
             ports = serial.tools.list_ports.comports()
             for port in ports:
-                # Check both description and hardware ID
+                # verifica la descripción del puerto y el ID
                 port_info = f"{port.description} {port.hwid}".lower()
                 if any(id.lower() in port_info for id in arduino_identifiers):
                     return port.device
 
-            # Fallback: Check common port names if auto-detection fails
+            # Verifica nombres comunes si la auto detección falla
             common_ports = ['/dev/ttyACM0', '/dev/ttyUSB0', '/dev/ttyS0']
             for port in common_ports:
                 try:
@@ -764,9 +763,8 @@ class AppInterface2(AppBase):
 
         return None
 
-    """Lectura de datos seriales y cambbio de posición de animación"""
-
     def read_serial_port(self):
+        """Lectura de datos seriales y cambio de imagen de referencia en la animación"""
         try:
             while not self.stop_threads:
                 if self.ser and self.ser.is_open:
@@ -793,14 +791,13 @@ class AppInterface2(AppBase):
             print("Error reading the serial port:", e)
             self.stop_threads = True
 
-    """Conexión a arduino e inicialización de threads de lectura"""
-
     def connect_to_arduino(self):
+        """Conexión a arduino e inicialización de threads de lectura"""
         arduino_port = self.find_arduino_port()
         if arduino_port:
             if self.ser is None:
                 try:
-                    self.arduino_lock = threading.Lock()
+                    self.arduino_lock = threading.Lock() #Asegura la conexión al puerto serial
                     self.ser = serial.Serial(arduino_port, 115200, timeout=2)
                     self.status_label.config(text=f"Conectado a: {arduino_port}", fg=self.connected_color,
                                              font=("Inter", 12))
@@ -821,10 +818,10 @@ class AppInterface2(AppBase):
         else:
             messagebox.showwarning("Error", "No se encontró el dispositivo. Verifique su conexión.")
 
-    """Desconexión de arduino y detención de threads de lectura"""
 
     def disconnect_arduino(self):
-        self.turn_off_motor()
+        """Desconexión de arduino y detención de threads de lectura"""
+        self.turn_off_motor() #Evita que el motor siga aplicando fuerza al desconectar
         if self.ser and self.ser.is_open:
             self.stop_threads = True
             self.ser.close()
@@ -836,9 +833,8 @@ class AppInterface2(AppBase):
             self.is_connected = False
             self.stop_threads = False
 
-    """Inicialización de temporizador"""
-
-    def start_timer(self):   
+    def start_timer(self):
+        """Inicialización de temporizador"""
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
         key_id = guide[0:3]
         if not self.running:
@@ -847,20 +843,19 @@ class AppInterface2(AppBase):
             self.message_shown = False
             self.update_timer()
 
-    """Detiene el temporizador"""
 
     def stop_timer(self):
+        """Detiene el temporizador"""
         if self.running:
             self.time_left = 0  # Termina el temporizador
             self.running = False
 
-    """Actualiza el temporizador y determina el resultado del estudio"""
-
     def update_timer(self):
+        """Actualiza el temporizador y determina el resultado del estudio"""
         if not self.running:
             return
 
-        if self.time_left >= 0:
+        if self.time_left > 0:
             minutes, seconds = divmod(self.time_left, 60)
             self.label_timer.config(text=f"Temporizador: {minutes:02}:{seconds:02}")
             self.time_left -= 1
@@ -876,7 +871,7 @@ class AppInterface2(AppBase):
             if self.running:
                 self.root.after(1000, self.update_timer)
 
-        elif self.time_left == 0 and self.position <= self.max_angle and not self.message_shown:
+        elif self.time_left == 0 and self.position < self.max_angle and not self.message_shown:
             # Posición objetivo no alcanzada
             self.running = False
             self.failed_test("#F04770")
@@ -884,9 +879,8 @@ class AppInterface2(AppBase):
             messagebox.showinfo("Timer", "No ha alcanzado la posición deseada!")
             self.message_shown = True
 
-    """ Lógica ejecutada con el botón iniciar. """
-
     def toggle_boton(self):
+        """ Lógica ejecutada con el botón iniciar. """
         if self.boton_toggle["text"] == "Iniciar":
             # Se cambia la imagen del botón y se inicializa la animación del indicador y el envío de datos seriales
             messagebox.showinfo("Estudio", "Se ha comenzado a aplicar fuerza!")
@@ -911,9 +905,8 @@ class AppInterface2(AppBase):
                 self.squares[level_num - 1].config(bg="#FFFFFF")
                 self.achieved_levels[level_num - 1] = False
 
-    """ Envío de datos seriales """
-
     def send_value(self):
+        """ Envío de datos seriales al motor"""
         cadena = str(self.combobox.get())
         nivel = int(cadena.split()[1])
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
@@ -928,22 +921,22 @@ class AppInterface2(AppBase):
 
             while self.send_value_running and cumulative_value < final_value:
                 cumulative_value += divided_value
-                if self.ser and self.ser.is_open:  # Ensure the serial port is open
-                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                if self.ser and self.ser.is_open:  # Se verifica si existe comunicación serial
+                    self.arduino_lock.acquire()  # Asegura el thread de conexión a arduino
                     try:
-                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
-                        print(f"Sent: {cumulative_value}")  # Debug print
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Incremento de fuerza
+                        print(f"Sent: {cumulative_value}")  # Debug
                     except Exception as e:
                         print(f"Error writing to serial port: {e}")
                     finally:
-                        self.arduino_lock.release()  # Release the lock
+                        self.arduino_lock.release()  # Libera el thread de conexión a arduino
                 else:
                     print("Serial port is not open.")
                     break
 
-                time.sleep(2)  # Wait for 2 seconds before the next iteration
+                time.sleep(2)  # La fuerza incrementa cada 2 segundos
 
-            # When max torque is reached
+            # Cuando el torque alcanza el máx. valor ingresado ...
             if cumulative_value >= final_value:
                 self.max_torque_reached = True
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
@@ -956,20 +949,20 @@ class AppInterface2(AppBase):
             cumulative_value = 0
             while self.send_value_running and cumulative_value < nivel:
                 cumulative_value += divided_value
-                if self.ser and self.ser.is_open:  # Ensure the serial port is open
-                    self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
+                if self.ser and self.ser.is_open:  # Se verifica la comunicación serial
+                    self.arduino_lock.acquire()  # Asegura el thread de conexión a arduino
                     try:
-                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))  # Send the cumulative value
-                        print(f"Sent: {cumulative_value}")  # Debug print
+                        self.ser.write((str(cumulative_value) + "\n").encode('ascii'))   # Incremento de fuerza
+                        print(f"Sent: {cumulative_value}")  # Debug
                     except Exception as e:
                         print(f"Error writing to serial port: {e}")
                     finally:
-                        self.arduino_lock.release()  # Release the lock
+                        self.arduino_lock.release()  # Libera el thread de conexión a arduino
                 else:
                     print("Serial port is not open.")
                     break
 
-                time.sleep(2)  # Wait for 2 seconds before the next iteration
+                time.sleep(2)  # La fuerza incrementa cada 2 segundos
 
             # When max torque is reached
             if cumulative_value >= nivel:
@@ -977,22 +970,22 @@ class AppInterface2(AppBase):
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
                 self.start_timer()
 
-    """ Inicia la animación de barra, enciende el motor e inicia el envío de datos seriales """
-
     def animation_on_write_serial(self):
+        """ Inicia la animación de barra, enciende el motor e inicia el envío de datos seriales """
         self.combobox.config(state="disabled")
         self.start_animation()
         time.sleep(0.10)
         self.turn_on_motor()
         time.sleep(0.10)
 
-        # Start the send_value function in a separate thread
+        # Inicia la función send_value en un thread diferente
         self.send_value_running = True
         self.max_torque_reached = False
         self.send_value_thread = threading.Thread(target=self.send_value)
         self.send_value_thread.start()
 
     def animation_off_write_serial(self):
+        """Detiene la animación de barra y apaga el motor"""
         self.combobox.config(state="readonly")
         self.stop_animation()
         time.sleep(0.05)
@@ -1000,8 +993,9 @@ class AppInterface2(AppBase):
         time.sleep(0.05)
 
     def turn_on_motor(self):
+        """Función que enciende el motor"""
         if self.ser is not None and self.ser.is_open:
-            cadena = "998\n"
+            cadena = "998\n"  # Valor serial asignado desde arduino para encender el motor
             self.arduino_lock.acquire()
             try:
                 self.ser.write(cadena.encode('ascii'))
@@ -1012,8 +1006,9 @@ class AppInterface2(AppBase):
                 self.arduino_lock.release()
 
     def turn_off_motor(self):
+        """Función que apaga el motor"""
         if self.ser is not None and self.ser.is_open:
-            cadena = "999\n"
+            cadena = "999\n"  # Valor serial asignado desde arduino para apagar el motor
             self.arduino_lock.acquire()
             try:
                 self.ser.write(cadena.encode('ascii'))
@@ -1024,8 +1019,9 @@ class AppInterface2(AppBase):
                 self.arduino_lock.release()
 
     def origin_motor(self):
+        """Función que asigna la posición 0 del motor"""
         if self.ser is not None:
-            cadena = "997\n"
+            cadena = "997\n" # Valor serial asignado desde arduino para ajustar el origen
             self.arduino_lock.acquire()
             time.sleep(0.05)
             self.ser.write(cadena.encode('ascii'))
@@ -1033,9 +1029,11 @@ class AppInterface2(AppBase):
             self.arduino_lock.release()
 
     def validate_input(self, new_value):
+        """Función utilizada para impedir la entrada de datos no númericos"""
         return new_value.isdigit() or new_value == ""
 
     def update_state(self, event=None):
+        """Función que habilita la entrada de fuerza si el combobox se encuentra en nv 4 o 5"""
         if self.combobox.get() in ["Nivel 4", "Nivel 5"]:
             self.user_input.config(state="normal")
         else:
@@ -1043,6 +1041,7 @@ class AppInterface2(AppBase):
             self.user_input.delete(0, tk.END)
 
     def check_last_lvl(self, actual_lvl):
+        """Función que permite al usuario omitir/verificar niveles de estudio"""
         if actual_lvl > 1 and not self.achieved_levels[actual_lvl - 1]:
             answer = messagebox.askquestion("Confirmación",
                                             f"¿Pasó exitosamente los niveles 1 a {actual_lvl - 1}?")
@@ -1059,17 +1058,20 @@ class AppInterface2(AppBase):
         return True
 
     def create_combo_widget(self):
+        """Conjunto de elementos (texto, etiquetas y entradas) de la pantalla 'Estudio automático'. """
         # Titulo
-        self.manual_title = tk.Label(self.canvas, text="Estudio Automático", fg=self.text_color,
+        self.autom_title = tk.Label(self.canvas, text="Estudio Automático", fg=self.text_color,
                                      font=("Inter", 30), bg=self.used_color)
-        self.manual_title.place(x=330.0, y=15.0, width=350)
+        self.autom_title.place(x=330.0, y=15.0, width=350)
 
+        # Creación de combobox con los niveles de fuerza
         levels = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5"]
         self.combobox = ttk.Combobox(self.canvas, values=levels, font=("Inter", 14), width=20)
         self.combobox.set("Elija el nivel de fuerza")
         self.combobox.config(state="disabled")  # Make the combobox readonly
         self.combobox.place(x=360, y=555)
 
+        # Entrada de texto para cambiar la cantidad de torque (a partir de nv 4 y 5)
         self.cmd_entry = self.canvas.register(self.validate_input)
         self.user_input = tk.Entry(self.canvas, font=("Inter", 16), width=10, validate="key",
                                    validatecommand=(self.cmd_entry, "%P"), bg="white")
@@ -1089,9 +1091,6 @@ class AppInterface2(AppBase):
         self.strengthT_label.place(x=355, y=600)
         self.strengthKG_label = tk.Label(self.canvas, text="N/m", font=("Inter", 18), bg=self.used_color, fg="#000000")
         self.strengthKG_label.place(x=555, y=600)
-
-        # self.nivelesF_label = self.canvas.create_text(420, 530, text="Niveles de fuerza", font=("Inter", 13), fill=self.text_color)
-
         self.indicator1_bg_image = PhotoImage(file=relative_to_assets("INDICATOR1_BG0.png"))
         self.canvas.create_image(709, 135, image=self.indicator1_bg_image, anchor="nw")
 
@@ -1129,6 +1128,7 @@ class AppInterface2(AppBase):
         self.canvas.create_image(562, 135, image=self.gauge_bg_image, anchor="nw")
 
         for i in range(5):
+            #Esta iteración crea los recuadros utilizados como indicador dentro del estudio
             self.square_widget = tk.Label(self.canvas, text=str(i + 1), font=("Inter", 10), width=12, height=4, bd=0,
                                           highlightbackground="#D3D4D9",
                                           highlightthickness=1, bg="white")
@@ -1171,6 +1171,7 @@ class AppInterface2(AppBase):
         self.achieved_levels = [False] * 5
 
     def save_max_angle(self):
+        """Función que almacena temporalmente el ángulo máximo declarado por el encargado del estudio"""
         if self.position is not None:
             self.canvas.itemconfig(self.max_angle_text, text=f"Ángulo máx.:  {self.position:.1f} °")
             self.max_angle = self.position
@@ -1178,6 +1179,7 @@ class AppInterface2(AppBase):
             messagebox.showinfo("Error", "No se detecta posición, verifique el sistema")
 
     def achieved_test(self, color):
+        """Función que actualiza el color del indicador (exitoso), al igual de apagar el motor"""
         nivel_actual = self.combobox.get()
         if nivel_actual in self.datos:
             self.datos[nivel_actual].append({
@@ -1190,6 +1192,7 @@ class AppInterface2(AppBase):
         self.turn_off_motor()
 
     def failed_test(self, color):
+        """Función que actualiza el color del indicador (fallido), al igual de apagar el motor"""
         nivel_actual = self.combobox.get()
         if nivel_actual in self.datos:
             self.datos[nivel_actual].append({
@@ -1202,6 +1205,7 @@ class AppInterface2(AppBase):
         self.turn_off_motor()
 
     def apply_combox_changes(self):
+        """Solo se utiliza cuando se aplica la fuerza en los niveles 4 y 5"""
         self.level = self.combobox.get()
         self.value = self.user_input.get()
         guide = (self.patient_data.get("Actividad", "No Registrado")).lower()
@@ -1233,9 +1237,7 @@ class AppInterface2(AppBase):
         self.mensaje_label1.after(5000, lambda: self.mensaje_label1.config(text=""))
 
     def auto_size_columns(ws):
-        """
-        Ajusta automáticamente el ancho de las columnas en una hoja de Excel.
-        """
+        """Ajusta automáticamente el ancho de las columnas en una hoja de Excel. """
         for col in ws.columns:
             max_length = 0
             column = col[0].column_letter  # Obtener la letra de la columna
@@ -1249,6 +1251,7 @@ class AppInterface2(AppBase):
             ws.column_dimensions[column].width = adjusted_width
 
     def save_boton(self):
+        """Función que almacena los datos del estudio al excel"""
         try:
             # Crear una lista para almacenar todos los datos
             datos_finales = []
@@ -1413,6 +1416,7 @@ class AppInterface2(AppBase):
             row_index += 1
 
     def start_animation(self):
+        """Activa la función blinking dentro de los recuadros del indicador"""
         self.level1 = self.combobox.get()
         if self.level1.startswith("Nivel "):
             self.level1_num = int(self.level1.split(" ")[1])
@@ -1426,6 +1430,7 @@ class AppInterface2(AppBase):
                 self.boton_toggle.config(text="Detener", image=self.imagen_detener)
 
     def blinking(self, square):
+        """Realiza la animación del parpadeo"""
         if self.active_animation:
             color = "#60AFFF" if self.blink_state else "white"
             square.config(bg=color)
@@ -1433,6 +1438,7 @@ class AppInterface2(AppBase):
             square.after(500, lambda: self.blinking(square))
 
     def stop_animation(self):
+        """Detiene la función blinking dentro de los recuadros del indicador"""
         self.level = self.combobox.get()
         self.active_animation = False
         self.combobox.config(state="normal")
@@ -1445,6 +1451,7 @@ class AppInterface2(AppBase):
                 self.user_input.config(state="normal")
 
     def highlight(self, color):
+        """Pinta el recuadro de x color al pasar o fallar la prueba"""
         self.level = self.combobox.get()
 
         if self.level.startswith("Nivel "):
@@ -1461,7 +1468,7 @@ class AppInterface2(AppBase):
                 self.user_input.config(state="normal")
 
     def init_widgets(self):
-        # Mostrar información del paciente
+        """Se declaraon los elementos que muestran la info. del paciente dentro de la pantalla de estudio"""
         nombre_paciente = self.patient_data.get("Nombre", "No registrado")
         self.nombre_title = self.canvas.create_text(50, 120, text=f"Pierna de: {nombre_paciente}",
                                                     font=("Inter", 13), fill=self.text_color, width=400, anchor="w")
@@ -1475,6 +1482,7 @@ class AppInterface2(AppBase):
         self.return_btn.place(x=810, y=645)
 
     def on_closing(self):
+        """Función que forma parte del protocolo de seguridad del programa al cerrar la GUI"""
         self.turn_off_motor()
         time.sleep(0.05)
         self.disconnect_arduino()
@@ -1562,7 +1570,7 @@ class AppInterface3(AppBase):
         return canvas
 
     def serial_widgets(self):
-
+        """Botones de conexión. """
         self.status_label = tk.Label(self.canvas, text="Sin conexión", fg=self.disconnected_color, font=("Inter", 12),
                                      bg=self.used_color)
         self.status_label.place(x=75.0, y=620.0)
@@ -1580,34 +1588,35 @@ class AppInterface3(AppBase):
         self.toggle_connection_button.place(x=70, y=550)
 
     def toggle_connection(self):
+        """Cambia el estado de la conexión. """
         if self.is_connected:
             self.disconnect_arduino()
         else:
             self.connect_to_arduino()
 
     def find_arduino_port(self):
-        """Find the Arduino's serial port on Raspberry Pi OS (Linux)"""
+        """Se encuentra el puerto de Arduino desde Raspberry Pi OS (Linux)"""
         import serial.tools.list_ports
 
-        # Common Arduino/CH340 identifiers on Linux
+        # Identificadores comunes de Arduino/CH340 en Linux
         arduino_identifiers = [
-            'Arduino',  # Official Arduino boards
-            'CH340',  # Common Chinese clone chip
-            'USB2.0-Serial',  # Alternative CH340 description
-            'USB Serial',  # Generic serial
-            'ACM',  # Arduino Uno sometimes shows as ttyACM
-            'USB2.0-Ser'  # Partial match for some adapters
+            'Arduino',
+            'CH340',  # Chino
+            'USB2.0-Serial',
+            'USB Serial',
+            'ACM',
+            'USB2.0-Ser'
         ]
 
         try:
             ports = serial.tools.list_ports.comports()
             for port in ports:
-                # Check both description and hardware ID
+                # verifica la descripción del puerto y el ID
                 port_info = f"{port.description} {port.hwid}".lower()
                 if any(id.lower() in port_info for id in arduino_identifiers):
                     return port.device
 
-            # Fallback: Check common port names if auto-detection fails
+            # Verifica nombres comunes si la auto detección falla
             common_ports = ['/dev/ttyACM0', '/dev/ttyUSB0', '/dev/ttyS0']
             for port in common_ports:
                 try:
@@ -1754,11 +1763,14 @@ class AppInterface3(AppBase):
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
 
         elif (int(nivel) >= 4) and self.user_input.get().isdigit():
-            cadena = str(self.user_input.get())
-            nivel = int(cadena)
-            divided_value = nivel / 4
+
+            final_value = int(self.user_input.get())
+            cadena = f"{key_id}_nv{nivel}"
+            max_value = int(read_input_from_json(cadena))
+            divided_value = final_value / 4
             cumulative_value = 0
-            while self.send_value_running and cumulative_value < nivel:
+
+            while self.send_value_running and cumulative_value < max_value:
                 cumulative_value += divided_value
                 if self.ser and self.ser.is_open:  # Ensure the serial port is open
                     self.arduino_lock.acquire()  # Acquire the lock for thread-safe access
@@ -1776,7 +1788,7 @@ class AppInterface3(AppBase):
                 time.sleep(2)  # Wait for 2 seconds before the next iteration
 
             # When max torque is reached
-            if cumulative_value >= nivel:
+            if cumulative_value >= final_value:
                 self.max_torque_reached = True
                 messagebox.showinfo("Alerta", "Se ha alcanzado el torque máximo.")
 
@@ -2276,37 +2288,37 @@ Función que controla la imagen de la pierna
 
 
 class LegAnimation:
+    """Función que utiliza imagenes png respecto al valor de posición para generar una animación"""
     def __init__(self, canvas, image_folder_path):
         self.canvas = canvas
         self.image_folder_path = image_folder_path
 
-        # Load PNG frames from the folder
+        # Se cargan las imagenes png
         self.frames = self.load_png_frames(image_folder_path)
 
-        # Create a label to display the image frame
+        # Elemento de tkinter que contiene la animación
         self.label = tk.Label(self.canvas, bg="white", highlightthickness=0)
-        self.label.place(x=46, y=137)  # Place the label
+        self.label.place(x=46, y=137)
 
         self.text_id1 = self.canvas.create_text(
-            240, 470,  # Coordinates (x, y)
-            text="0.0°",  # Text content
-            font=("Inter", 13),  # Font and size
-            fill="black"  # Text color
+            240, 470,
+            text="0.0°",
+            font=("Inter", 13),
+            fill="black"
         )
 
         self.text_id2 = self.canvas.create_text(
-            490, 470,  # Coordinates (x, y)
-            text="0.0",  # Text content
-            font=("Inter", 13),  # Font and size
-            fill="black"  # Text color
+            490, 470,
+            text="0.0",
+            font=("Inter", 13),
+            fill="black"
         )
-
-        # Initialize with the first frame
-        self.update_frame(0, 0)  # Start with position 0
+        self.update_frame(0, 0)
 
     def load_png_frames(self, image_folder_path):
+        """Se cargan las imagenes png"""
         frames = []
-        # Sort files to ensure correct order
+        # Se ordenan las imagenes respecto a su id: frame_n
         files = sorted(Path(image_folder_path).iterdir(), key=lambda x: int(x.stem.split("_")[-1]))
         for file in files:
             if file.is_file() and file.suffix.lower() == ".png":
@@ -2315,13 +2327,13 @@ class LegAnimation:
         return frames
 
     def input_to_frame(self, position, total_frames, degrees_per_frame=2.3):
+        """Se establece una relación entre grados y por cada frame"""
         frame_index = int(position / degrees_per_frame)
-        # Ensure the frame index is within bounds
         frame_index = max(0, min(frame_index, total_frames - 1))
         return frame_index
 
     def update_frame(self, position, torque):
-        """Update the displayed frame based on position value."""
+        """Se actualiza la imagen respecto al valor de posición."""
         frame_index = self.input_to_frame(position, len(self.frames))
         frame = self.frames[frame_index]
         frame_image = ImageTk.PhotoImage(image=frame)
@@ -2336,6 +2348,6 @@ class LegAnimation:
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("630x550")
-    controller = Controller(root)  # Create the controller
-    controller.switch_frame(AppInterface0)  # Start with AppInterface0
+    controller = Controller(root)  # Crea el controlador del sistema
+    controller.switch_frame(AppInterface0)
     root.mainloop()
